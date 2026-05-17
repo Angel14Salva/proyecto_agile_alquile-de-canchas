@@ -62,8 +62,8 @@ CREATE TABLE pagos (
   registrado_por INT,
   created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (reserva_id)    REFERENCES reservas(id)  ON DELETE RESTRICT,
-  FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+  FOREIGN KEY (reserva_id)     REFERENCES reservas(id)  ON DELETE RESTRICT,
+  FOREIGN KEY (registrado_por) REFERENCES usuarios(id)  ON DELETE SET NULL
 );
 
 CREATE INDEX idx_reservas_fecha   ON reservas(fecha);
@@ -73,19 +73,18 @@ CREATE INDEX idx_reservas_estado  ON reservas(estado);
 CREATE INDEX idx_pagos_estado     ON pagos(estado);
 
 INSERT INTO usuarios (nombre, email, password_hash, rol, telefono) VALUES
-('Administrador', 'admin@canchas.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', '999000001');
+('Administrador', 'admin@canchas.com',     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin',        '999000001'),
+('Recepcionista', 'recepcion@canchas.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'recepcionista','999000002'),
+('Cliente Demo',  'cliente@canchas.com',   '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'cliente',      '999000003');
 
 INSERT INTO canchas (nombre, deporte, descripcion, capacidad, precio_hora, hora_apertura, hora_cierre) VALUES
-('Cancha 1 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 2 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 3 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 4 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 5 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 6 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 7 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 8 - Fútbol',     'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
-('Cancha 9 - Basketball',  'basketball', 'Cancha de cemento techada con tableros profesionales.',                    10, 50.00, '08:00:00', '22:00:00'),
-('Cancha 10 - Volleyball', 'volleyball', 'Cancha de cemento para volleyball con red reglamentaria.',                 12, 40.00, '08:00:00', '22:00:00');
-
-SELECT id, nombre, deporte, precio_hora FROM canchas;
-SELECT id, nombre, email, rol FROM usuarios;
+('Cancha 1 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 2 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 3 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 4 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 5 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 6 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 7 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 8 - Fútbol',      'futbol',     'Cancha de grass sintético con iluminación nocturna. Vestuarios incluidos.', 14, 80.00, '07:00:00', '23:00:00'),
+('Cancha 9 - Basketball',  'basketball', 'Cancha de cemento techada con tableros profesionales.',                     10, 50.00, '08:00:00', '22:00:00'),
+('Cancha 10 - Volleyball', 'volleyball', 'Cancha de cemento para volleyball con red reglamentaria.',                  12, 40.00, '08:00:00', '22:00:00');
