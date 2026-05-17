@@ -1,9 +1,3 @@
--- ============================================================
--- SISTEMA DE RESERVAS DE CANCHAS DEPORTIVAS
--- Base de datos: canchas_db
--- Compatible con: TiDB Cloud (MySQL 8.0)
--- ============================================================
-
 CREATE DATABASE IF NOT EXISTS canchas_db;
 USE canchas_db;
 
