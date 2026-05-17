@@ -1,7 +1,7 @@
 // Cambia esta URL según el entorno:
 // Desarrollo (Codespace): URL del puerto 3000 de tu Codespace
 // Producción (Render):    https://tu-backend.onrender.com
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://improved-palm-tree-g45q6qwvx9vwhv4jx-3000.app.github.dev';
 
 const api = {
   // ─── Token helpers ───────────────────────────────────────
