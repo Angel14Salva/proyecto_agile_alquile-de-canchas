@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crear cuenta — Pacific Sport Center</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body class="login-page">
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">⚽</div>
+      <h1>Crear cuenta</h1>
+      <p>Pacific Sport Center</p>
+    </div>
+
+    <div id="alert" class="alert hidden"></div>
+
+    <form id="registroForm">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="nombre" placeholder="Tu nombre completo" required>
+      </div>
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com" required>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="Mínimo 8 caracteres" required minlength="8">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="telefono" placeholder="999000000">
+        </div>
+        <div class="form-group">
+          <label>DNI</label>
+          <input type="text" id="dni" placeholder="12345678">
+        </div>
+      </div>
+      <button type="submit" class="btn-primary btn-full" id="btnRegistro">Crear cuenta</button>
+    </form>
+
+    <div class="login-links" style="justify-content:center;margin-top:14px">
+      <a href="index.html">← Volver al login</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  if (api.isLoggedIn()) window.location.href = 'dashboard.html';
+
+  document.getElementById('registroForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn   = document.getElementById('btnRegistro');
+    const alert = document.getElementById('alert');
+    btn.textContent = 'Creando cuenta...';
+    btn.disabled = true;
+    alert.className = 'alert hidden';
+
+    try {
+      const data = await api.post('/api/auth/register', {
+        nombre:   document.getElementById('nombre').value.trim(),
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+        telefono: document.getElementById('telefono').value || null,
+        dni:      document.getElementById('dni').value || null,
+      }, false);
+
+      api.setToken(data.token);
+      api.setUsuario(data.usuario);
+      window.location.href = 'dashboard.html';
+
+    } catch(err) {
+      alert.textContent = err.message;
+      alert.className = 'alert alert-error';
+      btn.textContent = 'Crear cuenta';
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

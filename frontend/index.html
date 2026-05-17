@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacific Sport Center — Iniciar sesión</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body class="login-page">
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">⚽</div>
+      <h1>Pacific Sport Center</h1>
+      <p>Sistema de reservas de canchas</p>
+    </div>
+
+    <div id="alert" class="alert hidden"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Correo electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com" required>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn-primary btn-full" id="btnLogin">
+        Ingresar al sistema
+      </button>
+    </form>
+
+    <div class="login-links">
+      <a href="recuperar.html">¿Olvidaste tu contraseña?</a>
+      <a href="registro.html">Crear cuenta</a>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  // Si ya está logueado, redirigir al dashboard
+  if (api.isLoggedIn()) window.location.href = 'dashboard.html';
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnLogin');
+    const alert = document.getElementById('alert');
+    btn.textContent = 'Ingresando...';
+    btn.disabled = true;
+    alert.className = 'alert hidden';
+
+    try {
+      const data = await api.post('/api/auth/login', {
+        email:    document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value
+      }, false);
+
+      api.setToken(data.token);
+      api.setUsuario(data.usuario);
+      window.location.href = 'dashboard.html';
+
+    } catch (err) {
+      alert.textContent = err.message;
+      alert.className = 'alert alert-error';
+      btn.textContent = 'Ingresar al sistema';
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
