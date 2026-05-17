@@ -1,0 +1,180 @@
+const bcrypt = require('bcryptjs');
+const jwt    = require('jsonwebtoken');
+const db     = require('../db/connection');
+
+// ──────────────────────────────────────────
+// POST /api/auth/register
+// ──────────────────────────────────────────
+const register = async (req, res) => {
+  const { nombre, email, password, telefono, dni } = req.body;
+
+  if (!nombre || !email || !password) {
+    return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener mínimo 8 caracteres' });
+  }
+
+  try {
+    const [existe] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+    if (existe.length > 0) {
+      return res.status(409).json({ error: 'El correo ya está registrado' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const [result] = await db.query(
+      'INSERT INTO usuarios (nombre, email, password_hash, rol, telefono, dni) VALUES (?, ?, ?, "cliente", ?, ?)',
+      [nombre, email, hash, telefono || null, dni || null]
+    );
+
+    const token = jwt.sign(
+      { userId: result.insertId, email, rol: 'cliente' },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.status(201).json({
+      message: 'Usuario registrado correctamente',
+      token,
+      usuario: { id: result.insertId, nombre, email, rol: 'cliente' }
+    });
+  } catch (err) {
+    console.error('Error en register:', err);
+    res.status(500).json({ error: 'Error al registrar usuario' });
+  }
+};
+
+// ──────────────────────────────────────────
+// POST /api/auth/login
+// ──────────────────────────────────────────
+const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+  }
+
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nombre, email, password_hash, rol, activo FROM usuarios WHERE email = ?',
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const usuario = rows[0];
+
+    if (!usuario.activo) {
+      return res.status(403).json({ error: 'Tu cuenta ha sido desactivada. Contacta al administrador.' });
+    }
+
+    const passwordValida = await bcrypt.compare(password, usuario.password_hash);
+    if (!passwordValida) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const token = jwt.sign(
+      { userId: usuario.id, email: usuario.email, rol: usuario.rol },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      message: 'Login exitoso',
+      token,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol
+      }
+    });
+  } catch (err) {
+    console.error('Error en login:', err);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+};
+
+// ──────────────────────────────────────────
+// GET /api/auth/me
+// ──────────────────────────────────────────
+const me = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT id, nombre, email, rol, telefono, dni, created_at FROM usuarios WHERE id = ?',
+      [req.user.userId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Error al obtener perfil' });
+  }
+};
+
+// ──────────────────────────────────────────
+// POST /api/auth/forgot-password
+// ──────────────────────────────────────────
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+
+  try {
+    const [rows] = await db.query('SELECT id FROM usuarios WHERE email = ?', [email]);
+
+    // Siempre responder igual para no revelar si el email existe
+    if (rows.length === 0) {
+      return res.json({ message: 'Si el correo existe, recibirás instrucciones en breve.' });
+    }
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutos
+
+    await db.query(
+      'UPDATE usuarios SET reset_token = ?, reset_token_expiry = ? WHERE email = ?',
+      [token, expiry, email]
+    );
+
+    // TODO: enviar email con el token (integrar nodemailer)
+    console.log(`Reset token para ${email}: ${token}`);
+
+    res.json({ message: 'Si el correo existe, recibirás instrucciones en breve.' });
+  } catch (err) {
+    console.error('Error en forgotPassword:', err);
+    res.status(500).json({ error: 'Error al procesar solicitud' });
+  }
+};
+
+// ──────────────────────────────────────────
+// POST /api/auth/reset-password
+// ──────────────────────────────────────────
+const resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token y contraseña requeridos' });
+  if (password.length < 8) return res.status(400).json({ error: 'Mínimo 8 caracteres' });
+
+  try {
+    const [rows] = await db.query(
+      'SELECT id FROM usuarios WHERE reset_token = ? AND reset_token_expiry > NOW()',
+      [token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'Token inválido o expirado' });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await db.query(
+      'UPDATE usuarios SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?',
+      [hash, rows[0].id]
+    );
+
+    res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    console.error('Error en resetPassword:', err);
+    res.status(500).json({ error: 'Error al resetear contraseña' });
+  }
+};
+
+module.exports = { register, login, me, forgotPassword, resetPassword };
