@@ -17,13 +17,13 @@ const PORT = process.env.PORT || 3000;
 // ──────────────────────────────────────────
 // Seguridad: headers HTTP
 // ──────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 
 // ──────────────────────────────────────────
 // CORS — solo acepta peticiones del frontend
 // ──────────────────────────────────────────
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -34,6 +34,7 @@ app.use(cors({
 // ──────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('../frontend'));
 
 // ──────────────────────────────────────────
 // Rate limiting general
