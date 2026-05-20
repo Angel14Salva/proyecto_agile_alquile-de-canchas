@@ -95,7 +95,7 @@ const create = async (req, res) => {
 
   // Validar que no sea menos de 1 hora antes
   const fechaReserva = new Date(`${fecha}T${hora_inicio}`);
-  const ahora = new Date();
+  const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
   const diff  = (fechaReserva - ahora) / 1000 / 60; // minutos
 
   if (diff < 60) {
