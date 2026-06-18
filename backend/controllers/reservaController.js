@@ -105,21 +105,11 @@ class ReservaController {
     const num = String(rows[0].total + 1).padStart(3, '0');
     return 'RES-' + anio + '-' + num;
   }
-}
-
-
   async getByCode(req, res) {
     try {
       const { codigo } = req.params;
       const [rows] = await db.query(
-        `SELECT r.*, c.nombre as cancha_nombre, c.precio_hora,
-                u.nombre as cliente_nombre, u.email as cliente_email,
-                p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto
-         FROM reservas r
-         JOIN canchas  c ON r.cancha_id  = c.id
-         JOIN usuarios u ON r.usuario_id = u.id
-         LEFT JOIN pagos p ON p.reserva_id = r.id
-         WHERE r.codigo = ?`,
+        'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as cliente_nombre, u.email as cliente_email, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE r.codigo = ?',
         [codigo]
       );
       if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
@@ -128,7 +118,6 @@ class ReservaController {
       res.status(500).json({ error: 'Error al buscar reserva' });
     }
   }
-
 }
 
 module.exports = new ReservaController();
