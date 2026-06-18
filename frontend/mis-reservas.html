@@ -140,7 +140,7 @@
             <tr>
               <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
               <td>${r.cancha_nombre}</td>
-              <td>${r.fecha}</td>
+              <td>${r.fecha?.substring(0,10)}</td>
               <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
               <td>${badgeEstado(r.estado)}</td>
               <td>${badgePago(r.pago_estado)}</td>
