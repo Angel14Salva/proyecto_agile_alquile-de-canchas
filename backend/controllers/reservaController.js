@@ -72,7 +72,13 @@ class ReservaController {
       const fechaReserva = new Date(reserva.fecha + 'T' + reserva.hora_inicio);
       const diff = (fechaReserva - new Date()) / 1000 / 60 / 60;
       if (diff < 2) return res.status(400).json({ error: 'No se puede modificar con menos de 2 horas de anticipacion' });
-      await db.query('UPDATE reservas SET fecha = COALESCE(?, fecha), hora_inicio = COALESCE(?, hora_inicio), hora_fin = COALESCE(?, hora_fin), notas = COALESCE(?, notas) WHERE id = ?', [fecha, hora_inicio, hora_fin, notas, id]);
+      let horaFin = hora_fin;
+      if (hora_inicio && !hora_fin) {
+        const [h, m] = hora_inicio.split(':').map(Number);
+        const fin = new Date(0, 0, 0, h + 1, m);
+        horaFin = fin.getHours().toString().padStart(2,'0') + ':' + fin.getMinutes().toString().padStart(2,'0') + ':00';
+      }
+      await db.query('UPDATE reservas SET fecha = COALESCE(?, fecha), hora_inicio = COALESCE(?, hora_inicio), hora_fin = COALESCE(?, hora_fin), notas = COALESCE(?, notas) WHERE id = ?', [fecha, hora_inicio, horaFin, notas, id]);
       res.json({ message: 'Reserva modificada correctamente' });
     } catch (err) {
       console.error('Error en update reserva:', err);
