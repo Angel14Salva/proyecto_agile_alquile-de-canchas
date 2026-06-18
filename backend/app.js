@@ -7,6 +7,7 @@ const path    = require('path');
 const authRoutes    = require('./routes/auth');
 const canchaRoutes  = require('./routes/canchas');
 const reservaRoutes = require('./routes/reservas');
+const flowRoutes    = require('./routes/flow');
 const usuarioRoutes = require('./routes/usuarios');
 const pagoRoutes    = require('./routes/pagos');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth',     authLimiter, authRoutes);
 app.use('/api/canchas',  canchaRoutes);
 app.use('/api/reservas', reservaRoutes);
+app.use('/api/pagos/flow', flowRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/pagos',    pagoRoutes);
 
