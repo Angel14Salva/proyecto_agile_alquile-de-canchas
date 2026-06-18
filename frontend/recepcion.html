@@ -50,8 +50,12 @@
         <div class="card">
           <div class="card-title">💵 Registrar pago en caja</div>
           <div class="form-group">
-            <label>ID de reserva</label>
-            <input type="number" id="pagoReservaId" placeholder="ID de la reserva">
+            <label>ID o Código de reserva</label>
+            <div class="input-group">
+              <input type="text" id="pagoReservaId" placeholder="Ej: 19 o RES-2026-019">
+              <button class="btn-secondary" onclick="buscarReserva()">Buscar</button>
+            </div>
+            <div id="infoReserva" style="margin-top:8px;font-size:12px;color:var(--green);display:none"></div>
           </div>
           <div class="form-group">
             <label>Método de pago</label>
@@ -114,14 +118,36 @@
     }
   }
 
+  async function buscarReserva() {
+    const val = document.getElementById('pagoReservaId').value.trim();
+    if (!val) return;
+    const info = document.getElementById('infoReserva');
+    try {
+      let reserva;
+      if (val.startsWith('RES-')) {
+        reserva = await api.get('/api/reservas/codigo/' + val);
+      } else {
+        reserva = await api.get('/api/reservas/' + val);
+      }
+      document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
+      info.style.display = 'block';
+      info.textContent = '✅ ' + reserva.cancha_nombre + ' · ' + reserva.fecha?.substring(0,10) + ' · ' + reserva.hora_inicio?.substring(0,5) + ' · Cliente: ' + reserva.cliente_nombre;
+    } catch(err) {
+      info.style.display = 'block';
+      info.style.color = 'var(--red)';
+      info.textContent = '❌ ' + err.message;
+    }
+  }
+
   async function registrarPago() {
-    const reservaId = document.getElementById('pagoReservaId').value;
     const metodo    = document.getElementById('pagoMetodo').value;
     const ref       = document.getElementById('pagoReferencia').value;
     const alert     = document.getElementById('alertPago');
 
+    const input = document.getElementById('pagoReservaId');
+    const reservaId = input.dataset.reservaId || input.value;
     if (!reservaId) {
-      alert.textContent = 'Ingresa el ID de la reserva';
+      alert.textContent = 'Busca primero la reserva por ID o código';
       alert.className = 'alert alert-error';
       return;
     }
