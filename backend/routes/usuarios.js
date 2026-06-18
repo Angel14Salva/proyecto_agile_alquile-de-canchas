@@ -1,13 +1,13 @@
 const express = require('express');
 const router  = express.Router();
-const { getAll, getById, create, update, buscar } = require('../controllers/usuarioController');
+const usuarioController = require('../controllers/usuarioController');
 const verifyToken = require('../middleware/verifyToken');
 const checkRole   = require('../middleware/checkRole');
 
-router.get('/buscar', verifyToken, checkRole('admin','recepcionista'), buscar);
-router.get('/',       verifyToken, checkRole('admin'), getAll);
-router.get('/:id',    verifyToken, checkRole('admin'), getById);
-router.post('/',      verifyToken, checkRole('admin'), create);
-router.put('/:id',    verifyToken, checkRole('admin'), update);
+router.get('/buscar', verifyToken, checkRole('admin','recepcionista'), usuarioController.buscar.bind(usuarioController));
+router.get('/',       verifyToken, checkRole('admin'), usuarioController.getAll.bind(usuarioController));
+router.get('/:id',    verifyToken, checkRole('admin'), usuarioController.getById.bind(usuarioController));
+router.post('/',      verifyToken, checkRole('admin'), usuarioController.create.bind(usuarioController));
+router.put('/:id',    verifyToken, checkRole('admin'), usuarioController.update.bind(usuarioController));
 
 module.exports = router;

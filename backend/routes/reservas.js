@@ -1,13 +1,13 @@
 const express = require('express');
 const router  = express.Router();
-const { getAll, getById, getByCode, create, update, cancel } = require('../controllers/reservaController');
+const reservaController = require('../controllers/reservaController');
 const verifyToken = require('../middleware/verifyToken');
 
-router.get('/',       verifyToken, getAll);
-router.get('/codigo/:codigo', verifyToken, getByCode);
-router.get('/:id',    verifyToken, getById);
-router.post('/',      verifyToken, create);
-router.put('/:id',    verifyToken, update);
-router.delete('/:id', verifyToken, cancel);
+router.get('/',       verifyToken, reservaController.getAll.bind(reservaController));
+router.get('/codigo/:codigo', verifyToken, reservaController.getByCode.bind(reservaController));
+router.get('/:id',    verifyToken, reservaController.getById.bind(reservaController));
+router.post('/',      verifyToken, reservaController.create.bind(reservaController));
+router.put('/:id',    verifyToken, reservaController.update.bind(reservaController));
+router.delete('/:id', verifyToken, reservaController.cancel.bind(reservaController));
 
 module.exports = router;
