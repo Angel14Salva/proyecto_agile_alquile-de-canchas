@@ -18,7 +18,6 @@
       <button class="topbar-btn" onclick="api.logout()">Salir</button>
     </div>
   </header>
-
   <div class="main-wrap">
     <nav class="sidebar" id="sidebar"></nav>
     <main class="content">
@@ -29,9 +28,7 @@
         </div>
         <a href="reservar.html" class="btn-primary">+ Nueva reserva</a>
       </div>
-
       <div id="alert" class="alert hidden"></div>
-
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div class="card-title" style="margin:0">Todas mis reservas</div>
@@ -49,6 +46,45 @@
   </div>
 </div>
 
+<!-- MODAL MODIFICAR RESERVA -->
+<div id="modalModificar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:480px;margin:16px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">✏️ Modificar reserva</div>
+    <div id="modalAlert" class="alert hidden" style="margin-bottom:12px"></div>
+    <div id="modalInfoActual" style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:12px;font-size:13px;margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>Nueva fecha</label>
+      <input type="date" id="modalFecha">
+    </div>
+    <div class="form-group">
+      <label>Nueva hora inicio</label>
+      <select id="modalHora">
+        <option value="">— Selecciona hora —</option>
+        <option value="07:00">07:00</option>
+        <option value="08:00">08:00</option>
+        <option value="09:00">09:00</option>
+        <option value="10:00">10:00</option>
+        <option value="11:00">11:00</option>
+        <option value="12:00">12:00</option>
+        <option value="13:00">13:00</option>
+        <option value="14:00">14:00</option>
+        <option value="15:00">15:00</option>
+        <option value="16:00">16:00</option>
+        <option value="17:00">17:00</option>
+        <option value="18:00">18:00</option>
+        <option value="19:00">19:00</option>
+        <option value="20:00">20:00</option>
+        <option value="21:00">21:00</option>
+        <option value="22:00">22:00</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-primary" onclick="guardarModificacion()">💾 Guardar cambios</button>
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sidebar.js"></script>
@@ -57,7 +93,11 @@
   renderSidebar('mis-reservas');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('modalFecha').min = hoy;
+
   let reservas = [];
+  let reservaEnEdicion = null;
 
   async function cargar() {
     try {
@@ -79,7 +119,6 @@
       document.getElementById('tablaReservas').innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No hay reservas</div>';
       return;
     }
-
     const badgeEstado = (e) => {
       const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray' };
       return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
@@ -88,46 +127,85 @@
       const m = { pagado:'badge-green', pendiente:'badge-amber', reembolsado:'badge-blue' };
       return e ? `<span class="badge ${m[e]||'badge-gray'}">${e}</span>` : '<span class="badge badge-amber">Pendiente</span>';
     };
-
+    const puedeModificar = (r) => {
+      if (r.estado !== 'pendiente' && r.estado !== 'confirmada') return false;
+      const fechaHora = new Date(`${r.fecha}T${r.hora_inicio}`);
+      return (fechaHora - new Date()) / (1000*60*60) >= 2;
+    };
     document.getElementById('tablaReservas').innerHTML = `
       <table>
-        <thead>
-          <tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Monto</th><th></th></tr>
-        </thead>
+        <thead><tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Monto</th><th>Acciones</th></tr></thead>
         <tbody>
           ${lista.map(r => `
             <tr>
-              <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo || '—'}</code></td>
+              <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
               <td>${r.cancha_nombre}</td>
               <td>${r.fecha}</td>
               <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
               <td>${badgeEstado(r.estado)}</td>
               <td>${badgePago(r.pago_estado)}</td>
               <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
-              <td>
-                ${(r.estado === 'pendiente' || r.estado === 'confirmada')
-                  ? `<button class="btn-danger" onclick="cancelar(${r.id})">Cancelar</button>`
-                  : '—'}
+              <td style="display:flex;gap:6px;flex-wrap:wrap">
+                ${puedeModificar(r) ? `<button class="btn-secondary btn-sm" onclick="abrirModal(${r.id})">✏️ Editar</button>` : ''}
+                ${(r.estado==='pendiente'||r.estado==='confirmada') ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
               </td>
-            </tr>
-          `).join('')}
+            </tr>`).join('')}
         </tbody>
       </table>`;
   }
 
+  function abrirModal(id) {
+    const r = reservas.find(x => x.id === id);
+    if (!r) return;
+    reservaEnEdicion = r;
+    document.getElementById('modalInfoActual').innerHTML = `
+      📋 <strong>${r.codigo||'—'}</strong> · ${r.cancha_nombre}<br>
+      📅 Fecha actual: <strong>${r.fecha}</strong> · Hora: <strong>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</strong>`;
+    document.getElementById('modalFecha').value = r.fecha;
+    document.getElementById('modalHora').value  = r.hora_inicio?.substring(0,5);
+    document.getElementById('modalAlert').className = 'alert hidden';
+    const modal = document.getElementById('modalModificar');
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModal() {
+    document.getElementById('modalModificar').style.display = 'none';
+    reservaEnEdicion = null;
+  }
+
+  async function guardarModificacion() {
+    if (!reservaEnEdicion) return;
+    const nuevaFecha = document.getElementById('modalFecha').value;
+    const nuevaHora  = document.getElementById('modalHora').value;
+    const alerta     = document.getElementById('modalAlert');
+    if (!nuevaFecha || !nuevaHora) { alerta.textContent='⚠️ Selecciona fecha y hora.'; alerta.className='alert alert-error'; return; }
+    const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
+    if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
+    try {
+      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora });
+      cerrarModal();
+      const alertMain = document.getElementById('alert');
+      alertMain.textContent = '✅ Reserva modificada exitosamente.';
+      alertMain.className = 'alert alert-success';
+      cargar();
+    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
+  }
+
   async function cancelar(id) {
     if (!confirm('¿Cancelar esta reserva? Solo puedes cancelar con al menos 2 horas de anticipación.')) return;
-    const alert = document.getElementById('alert');
+    const alerta = document.getElementById('alert');
     try {
       await api.delete(`/api/reservas/${id}`);
-      alert.textContent = 'Reserva cancelada correctamente';
-      alert.className = 'alert alert-success';
+      alerta.textContent = 'Reserva cancelada correctamente';
+      alerta.className = 'alert alert-success';
       cargar();
-    } catch(err) {
-      alert.textContent = err.message;
-      alert.className = 'alert alert-error';
-    }
+    } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
   }
+
+  // Cerrar modal al clickear fuera
+  document.getElementById('modalModificar').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
+  });
 
   cargar();
 </script>
