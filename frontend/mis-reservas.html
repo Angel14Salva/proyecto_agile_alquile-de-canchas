@@ -129,7 +129,9 @@
     };
     const puedeModificar = (r) => {
       if (r.estado !== 'pendiente' && r.estado !== 'confirmada') return false;
-      const fechaHora = new Date(`${r.fecha}T${r.hora_inicio}`);
+      const fechaStr = r.fecha?.substring(0,10);
+      const horaStr = r.hora_inicio?.substring(0,5);
+      const fechaHora = new Date(`${fechaStr}T${horaStr}:00`);
       return (fechaHora - new Date()) / (1000*60*60) >= 2;
     };
     document.getElementById('tablaReservas').innerHTML = `
