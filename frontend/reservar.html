@@ -233,12 +233,14 @@
         origen: 'linea'
       });
 
-      // Registrar pago si no es efectivo en caja
+      // Pago en linea via pasarela
       if (metodo !== 'efectivo') {
-        await api.post('/api/pagos', {
-          reserva_id: reserva.reserva_id,
-          metodo
+        const pagoResp = await api.post('/api/pagos/flow/crear', {
+          reserva_id: reserva.reserva_id
         });
+        // Redirigir al checkout de pago
+        window.location.href = pagoResp.url;
+        return;
       }
 
       document.getElementById('formReserva').style.display = 'none';
