@@ -49,7 +49,10 @@ class ReservaController {
       if (ocupado.length > 0) return res.status(409).json({ error: 'Ese horario ya esta reservado' });
       const [cancha] = await db.query('SELECT id, precio_hora FROM canchas WHERE id = ? AND activo = TRUE', [cancha_id]);
       if (cancha.length === 0) return res.status(404).json({ error: 'Cancha no encontrada' });
-      const codigo = await this.generarCodigo();
+      const anio = new Date().getFullYear();
+      const [crows] = await db.query('SELECT COUNT(*) as total FROM reservas WHERE YEAR(created_at) = ?', [anio]);
+      const num = String(crows[0].total + 1).padStart(3, '0');
+      const codigo = `RES-${anio}-${num}`;
       const [result] = await db.query('INSERT INTO reservas (codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, origen, notas) VALUES (?, ?, ?, ?, ?, ?, "pendiente", ?, ?)', [codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, origen || 'linea', notas || null]);
       res.status(201).json({ message: 'Reserva creada exitosamente', reserva_id: result.insertId, codigo, estado: 'pendiente' });
     } catch (err) {
