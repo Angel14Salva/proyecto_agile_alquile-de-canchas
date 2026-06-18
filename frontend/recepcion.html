@@ -19,7 +19,6 @@
       <button class="topbar-btn" onclick="api.logout()">Salir</button>
     </div>
   </header>
-
   <div class="main-wrap">
     <nav class="sidebar" id="sidebar"></nav>
     <main class="content">
@@ -29,11 +28,8 @@
           <div class="page-sub" id="fechaHoy"></div>
         </div>
       </div>
-
       <div id="alertPago" class="alert hidden"></div>
-
       <div class="grid2">
-        <!-- BUSCAR -->
         <div class="card">
           <div class="card-title">🔍 Buscar cliente</div>
           <div class="form-group">
@@ -45,8 +41,6 @@
           </div>
           <div id="resultadoBusqueda"></div>
         </div>
-
-        <!-- REGISTRAR PAGO -->
         <div class="card">
           <div class="card-title">💵 Registrar pago en caja</div>
           <div class="form-group">
@@ -73,8 +67,54 @@
           <button class="btn-primary btn-full" onclick="registrarPago()">Registrar pago</button>
         </div>
       </div>
-
-      <!-- RESERVAS PENDIENTES HOY -->
+      <div class="card">
+        <div class="card-title">✏️ Modificar reserva</div>
+        <div id="alertModificar" class="alert hidden" style="margin-bottom:12px"></div>
+        <div class="form-group">
+          <label>ID o Código de reserva</label>
+          <div class="input-group">
+            <input type="text" id="modReservaId" placeholder="Ej: 19 o RES-2026-019" onkeydown="if(event.key==='Enter')buscarReservaModificar()">
+            <button class="btn-secondary" onclick="buscarReservaModificar()">Buscar</button>
+          </div>
+        </div>
+        <div id="modFormContainer" style="display:none">
+          <div style="background:var(--gray-bg,#f8f9fa);border:1px solid var(--gray-border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
+            <div id="modInfoActual"></div>
+          </div>
+          <div class="grid2">
+            <div class="form-group">
+              <label>Nueva fecha</label>
+              <input type="date" id="modFecha">
+            </div>
+            <div class="form-group">
+              <label>Nueva hora inicio</label>
+              <select id="modHora">
+                <option value="">— Selecciona hora —</option>
+                <option value="07:00">07:00</option>
+                <option value="08:00">08:00</option>
+                <option value="09:00">09:00</option>
+                <option value="10:00">10:00</option>
+                <option value="11:00">11:00</option>
+                <option value="12:00">12:00</option>
+                <option value="13:00">13:00</option>
+                <option value="14:00">14:00</option>
+                <option value="15:00">15:00</option>
+                <option value="16:00">16:00</option>
+                <option value="17:00">17:00</option>
+                <option value="18:00">18:00</option>
+                <option value="19:00">19:00</option>
+                <option value="20:00">20:00</option>
+                <option value="21:00">21:00</option>
+                <option value="22:00">22:00</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn-primary" onclick="guardarModificacion()">💾 Guardar cambios</button>
+            <button class="btn-secondary" onclick="cancelarModificacion()">Cancelar</button>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title">📋 Reservas pendientes de pago hoy</div>
         <div id="pendientesHoy"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
@@ -82,7 +122,6 @@
     </main>
   </div>
 </div>
-
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sidebar.js"></script>
@@ -91,9 +130,9 @@
   requireRole('admin', 'recepcionista');
   renderSidebar('recepcion');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
-
   const hoy = new Date();
   document.getElementById('fechaHoy').textContent = hoy.toLocaleDateString('es-PE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('modFecha').min = hoy.toISOString().split('T')[0];
 
   async function buscar() {
     const q = document.getElementById('buscarQ').value.trim();
@@ -102,20 +141,14 @@
     div.innerHTML = '<div class="loading"><span class="spinner"></span>Buscando...</div>';
     try {
       const results = await api.get(`/api/usuarios/buscar?q=${encodeURIComponent(q)}`);
-      if (results.length === 0) {
-        div.innerHTML = '<p style="color:var(--gray-muted);font-size:13px;margin-top:8px">No se encontraron clientes</p>';
-        return;
-      }
+      if (results.length === 0) { div.innerHTML = '<p style="color:var(--gray-muted);font-size:13px;margin-top:8px">No se encontraron clientes</p>'; return; }
       div.innerHTML = results.map(u => `
         <div style="padding:10px;border:1px solid var(--gray-border);border-radius:7px;margin-top:8px">
           <div style="font-weight:600;font-size:13px">${u.nombre}</div>
-          <div style="font-size:12px;color:var(--gray-text)">${u.email} · DNI: ${u.dni || '—'} · Tel: ${u.telefono || '—'}</div>
+          <div style="font-size:12px;color:var(--gray-text)">${u.email} · DNI: ${u.dni||'—'} · Tel: ${u.telefono||'—'}</div>
           <span class="badge badge-gray" style="margin-top:4px">${u.rol}</span>
-        </div>
-      `).join('');
-    } catch(err) {
-      div.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">${err.message}</p>`;
-    }
+        </div>`).join('');
+    } catch(err) { div.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">${err.message}</p>`; }
   }
 
   async function buscarReserva() {
@@ -123,50 +156,76 @@
     if (!val) return;
     const info = document.getElementById('infoReserva');
     try {
-      let reserva;
-      if (val.startsWith('RES-')) {
-        reserva = await api.get('/api/reservas/codigo/' + val);
-      } else {
-        reserva = await api.get('/api/reservas/' + val);
-      }
+      const reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
       document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
-      info.style.display = 'block';
-      info.textContent = '✅ ' + reserva.cancha_nombre + ' · ' + reserva.fecha?.substring(0,10) + ' · ' + reserva.hora_inicio?.substring(0,5) + ' · Cliente: ' + reserva.cliente_nombre;
-    } catch(err) {
-      info.style.display = 'block';
-      info.style.color = 'var(--red)';
-      info.textContent = '❌ ' + err.message;
-    }
+      info.style.display = 'block'; info.style.color = 'var(--green)';
+      info.textContent = '✅ '+reserva.cancha_nombre+' · '+reserva.fecha?.substring(0,10)+' · '+reserva.hora_inicio?.substring(0,5)+' · Cliente: '+reserva.cliente_nombre;
+    } catch(err) { info.style.display='block'; info.style.color='var(--red)'; info.textContent='❌ '+err.message; }
   }
 
   async function registrarPago() {
-    const metodo    = document.getElementById('pagoMetodo').value;
-    const ref       = document.getElementById('pagoReferencia').value;
-    const alert     = document.getElementById('alertPago');
-
-    const input = document.getElementById('pagoReservaId');
+    const metodo = document.getElementById('pagoMetodo').value;
+    const ref    = document.getElementById('pagoReferencia').value;
+    const alerta = document.getElementById('alertPago');
+    const input  = document.getElementById('pagoReservaId');
     const reservaId = input.dataset.reservaId || input.value;
-    if (!reservaId) {
-      alert.textContent = 'Busca primero la reserva por ID o código';
-      alert.className = 'alert alert-error';
-      return;
-    }
-
+    if (!reservaId) { alerta.textContent='Busca primero la reserva'; alerta.className='alert alert-error'; return; }
     try {
-      await api.post('/api/pagos', {
-        reserva_id:  parseInt(reservaId),
-        metodo,
-        referencia: ref || null
-      });
-      alert.textContent = '✅ Pago registrado y reserva confirmada';
-      alert.className = 'alert alert-success';
-      document.getElementById('pagoReservaId').value = '';
-      document.getElementById('pagoReferencia').value = '';
+      await api.post('/api/pagos', { reserva_id: parseInt(reservaId), metodo, referencia: ref||null });
+      alerta.textContent='✅ Pago registrado y reserva confirmada'; alerta.className='alert alert-success';
+      document.getElementById('pagoReservaId').value=''; document.getElementById('pagoReferencia').value='';
       cargarPendientes();
-    } catch(err) {
-      alert.textContent = err.message;
-      alert.className = 'alert alert-error';
-    }
+    } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
+  }
+
+  let reservaEnEdicion = null;
+
+  async function buscarReservaModificar() {
+    const val = document.getElementById('modReservaId').value.trim();
+    if (!val) return;
+    const alerta = document.getElementById('alertModificar');
+    const form   = document.getElementById('modFormContainer');
+    alerta.className='alert hidden'; form.style.display='none'; reservaEnEdicion=null;
+    try {
+      const reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
+      if (reserva.estado==='cancelada') { alerta.textContent='❌ Esta reserva ya fue cancelada.'; alerta.className='alert alert-error'; return; }
+      if (reserva.estado==='pagada')    { alerta.textContent='❌ Esta reserva ya fue pagada.';    alerta.className='alert alert-error'; return; }
+      const fechaHoraReserva = new Date(`${reserva.fecha?.substring(0,10)}T${reserva.hora_inicio}`);
+      const diffHoras = (fechaHoraReserva - new Date()) / (1000*60*60);
+      if (diffHoras < 2) { alerta.textContent='❌ No se puede modificar con menos de 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
+      reservaEnEdicion = reserva;
+      document.getElementById('modInfoActual').innerHTML = `
+        <strong>Reserva encontrada:</strong><br>
+        📋 <strong>${reserva.codigo||'—'}</strong> · ${reserva.cancha_nombre}<br>
+        👤 Cliente: ${reserva.cliente_nombre}<br>
+        📅 Fecha: <strong>${reserva.fecha?.substring(0,10)}</strong> · Hora: <strong>${reserva.hora_inicio?.substring(0,5)} – ${reserva.hora_fin?.substring(0,5)}</strong><br>
+        <span class="badge badge-amber" style="margin-top:4px">Estado: ${reserva.estado}</span>`;
+      document.getElementById('modFecha').value = reserva.fecha?.substring(0,10);
+      document.getElementById('modHora').value  = reserva.hora_inicio?.substring(0,5);
+      form.style.display='block';
+    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
+  }
+
+  async function guardarModificacion() {
+    if (!reservaEnEdicion) return;
+    const nuevaFecha = document.getElementById('modFecha').value;
+    const nuevaHora  = document.getElementById('modHora').value;
+    const alerta     = document.getElementById('alertModificar');
+    if (!nuevaFecha||!nuevaHora) { alerta.textContent='⚠️ Selecciona fecha y hora.'; alerta.className='alert alert-error'; return; }
+    const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
+    if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
+    try {
+      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora });
+      alerta.textContent='✅ Reserva modificada exitosamente.'; alerta.className='alert alert-success';
+      cancelarModificacion(); cargarPendientes();
+    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
+  }
+
+  function cancelarModificacion() {
+    reservaEnEdicion=null;
+    document.getElementById('modReservaId').value='';
+    document.getElementById('modFormContainer').style.display='none';
+    document.getElementById('modInfoActual').innerHTML='';
   }
 
   async function cargarPendientes() {
@@ -174,41 +233,37 @@
       const fecha = hoy.toISOString().split('T')[0];
       const reservas = await api.get(`/api/reservas?fecha=${fecha}&estado=pendiente`);
       const div = document.getElementById('pendientesHoy');
-
-      if (reservas.length === 0) {
-        div.innerHTML = '<div class="empty"><div class="empty-icon">✅</div>No hay reservas pendientes de pago</div>';
-        return;
-      }
-
-      div.innerHTML = `
-        <table>
-          <thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead>
-          <tbody>
-            ${reservas.map(r => `
-              <tr>
-                <td>${r.id}</td>
-                <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
-                <td>${r.cliente_nombre}<br><span style="font-size:11px;color:var(--gray-muted)">${r.cliente_telefono||''}</span></td>
-                <td>${r.cancha_nombre}</td>
-                <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
-                <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
-                <td><span class="badge ${r.origen==='linea'?'badge-blue':'badge-amber'}">${r.origen==='linea'?'En línea':'Recepción'}</span></td>
-                <td>
-                  <button class="btn-primary btn-sm" onclick="cobrarRapido(${r.id})">Cobrar</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>`;
-    } catch(err) {
-      document.getElementById('pendientesHoy').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
-    }
+      if (reservas.length===0) { div.innerHTML='<div class="empty"><div class="empty-icon">✅</div>No hay reservas pendientes de pago</div>'; return; }
+      div.innerHTML = `<table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>
+        ${reservas.map(r=>`<tr>
+          <td>${r.id}</td>
+          <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
+          <td>${r.cliente_nombre}<br><span style="font-size:11px;color:var(--gray-muted)">${r.cliente_telefono||''}</span></td>
+          <td>${r.cancha_nombre}</td>
+          <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
+          <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
+          <td><span class="badge ${r.origen==='linea'?'badge-blue':'badge-amber'}">${r.origen==='linea'?'En línea':'Recepción'}</span></td>
+          <td style="display:flex;gap:6px">
+            <button class="btn-primary btn-sm" onclick="cobrarRapido(${r.id})">Cobrar</button>
+            <button class="btn-secondary btn-sm" onclick="modificarRapido('${r.codigo||r.id}')">Editar</button>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>`;
+    } catch(err) { document.getElementById('pendientesHoy').innerHTML=`<p style="color:var(--red)">${err.message}</p>`; }
   }
 
-  function cobrarRapido(reservaId) {
-    document.getElementById('pagoReservaId').value = reservaId;
-    document.getElementById('pagoMetodo').value = 'efectivo';
-    document.querySelector('.card:nth-child(2)').scrollIntoView({ behavior: 'smooth' });
+  function cobrarRapido(id) {
+    document.getElementById('pagoReservaId').value=id;
+    document.getElementById('pagoMetodo').value='efectivo';
+    document.querySelector('.card:nth-child(2)').scrollIntoView({behavior:'smooth'});
+  }
+
+  function modificarRapido(codigoOId) {
+    document.getElementById('modReservaId').value=codigoOId;
+    document.getElementById('modFormContainer').style.display='none';
+    document.getElementById('alertModificar').className='alert hidden';
+    document.getElementById('modReservaId').closest('.card').scrollIntoView({behavior:'smooth'});
+    buscarReservaModificar();
   }
 
   cargarPendientes();
