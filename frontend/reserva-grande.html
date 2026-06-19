@@ -69,7 +69,7 @@
             </div>
             <div class="form-group">
               <label>Turno *</label>
-              <select id="turno" onchange="actualizarResumen()">
+              <select id="turno" onchange="verificarDisponibilidad(); actualizarResumen();">
                 <option value="">— Selecciona turno —</option>
                 <option value="manana">🌅 Mañana (07:00 – 13:00) · 6 horas</option>
                 <option value="tarde">🌇 Tarde (13:00 – 23:00) · 10 horas</option>
@@ -116,7 +116,7 @@
   const minFecha = new Date();
   minFecha.setDate(minFecha.getDate() + 7);
   document.getElementById('fecha').min = minFecha.toISOString().split('T')[0];
-  document.getElementById('fecha').addEventListener('change', actualizarResumen);
+  document.getElementById('fecha').addEventListener('change', () => { verificarDisponibilidad(); actualizarResumen(); });
 
   let canchas = [];
   let canchasSeleccionadas = [];
@@ -219,6 +219,50 @@
       alerta.textContent=err.message; alerta.className='alert alert-error';
       btn.textContent='Confirmar reserva grande →'; btn.disabled=false;
     }
+  }
+
+  let canchasOcupadas = [];
+
+  async function verificarDisponibilidad() {
+    const fecha = document.getElementById('fecha').value;
+    const turno = document.getElementById('turno').value;
+    if (!fecha || !turno) return;
+    try {
+      const data = await api.get(`/api/reservas-grandes/disponibilidad?fecha=${fecha}&turno=${turno}`);
+      canchasOcupadas = data.ocupadas || [];
+      // Actualizar UI de canchas
+      canchas.forEach(c => {
+        const label = document.getElementById('label-' + c.id);
+        const checkbox = label?.querySelector('input[type=checkbox]');
+        if (!label) return;
+        if (canchasOcupadas.includes(c.id)) {
+          label.style.borderColor = 'var(--red, #e74c3c)';
+          label.style.background = '#fff5f5';
+          label.style.opacity = '0.6';
+          label.style.cursor = 'not-allowed';
+          if (checkbox) { checkbox.disabled = true; checkbox.checked = false; }
+          // Quitar de seleccionadas si estaba
+          const idx = canchasSeleccionadas.findIndex(x => x.id === c.id);
+          if (idx >= 0) canchasSeleccionadas.splice(idx, 1);
+          // Agregar badge ocupado
+          if (!label.querySelector('.badge-ocupado')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-ocupado';
+            badge.style.cssText = 'font-size:10px;color:#e74c3c;display:block;margin-top:2px';
+            badge.textContent = '🔴 Ocupada';
+            label.querySelector('div').appendChild(badge);
+          }
+        } else {
+          label.style.borderColor = canchasSeleccionadas.find(x=>x.id===c.id) ? 'var(--green)' : 'var(--gray-border)';
+          label.style.background = canchasSeleccionadas.find(x=>x.id===c.id) ? 'var(--green-light,#f0faf4)' : '';
+          label.style.opacity = '1';
+          label.style.cursor = 'pointer';
+          if (checkbox) checkbox.disabled = false;
+          const badge = label.querySelector('.badge-ocupado');
+          if (badge) badge.remove();
+        }
+      });
+    } catch(err) { console.error('Error verificando disponibilidad:', err); }
   }
 
   cargarCanchas();

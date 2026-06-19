@@ -124,6 +124,31 @@ class ReservaGrandeController {
     }
   }
 
+  async disponibilidad(req, res) {
+    const { fecha, turno } = req.query;
+    if (!fecha || !turno) return res.status(400).json({ error: 'Fecha y turno requeridos' });
+    const turnos = { manana: { inicio: '07:00:00', fin: '13:00:00' }, tarde: { inicio: '13:00:00', fin: '23:00:00' }, dia_completo: { inicio: '07:00:00', fin: '23:00:00' } };
+    const { inicio, fin } = turnos[turno] || turnos.dia_completo;
+    try {
+      const [canchasOcupadasNormal] = await db.query(
+        `SELECT DISTINCT cancha_id as id FROM reservas WHERE fecha = ? AND estado != 'cancelada'
+         AND ((hora_inicio >= ? AND hora_inicio < ?) OR (hora_fin > ? AND hora_fin <= ?) OR (hora_inicio <= ? AND hora_fin >= ?))`,
+        [fecha, inicio, fin, inicio, fin, inicio, fin]
+      );
+      const [canchasOcupadasGrande] = await db.query(
+        `SELECT DISTINCT rgc.cancha_id as id FROM reservas_grandes_canchas rgc
+         JOIN reservas_grandes rg ON rgc.reserva_grande_id = rg.id
+         WHERE rg.fecha = ? AND rg.estado != 'cancelada'
+         AND ((rg.hora_inicio >= ? AND rg.hora_inicio < ?) OR (rg.hora_fin > ? AND rg.hora_fin <= ?) OR (rg.hora_inicio <= ? AND rg.hora_fin >= ?))`,
+        [fecha, inicio, fin, inicio, fin, inicio, fin]
+      );
+      const ocupadas = [...new Set([...canchasOcupadasNormal, ...canchasOcupadasGrande].map(r => r.id))];
+      res.json({ ocupadas });
+    } catch(err) {
+      res.status(500).json({ error: 'Error al verificar disponibilidad' });
+    }
+  }
+
   async cancel(req, res) {
     const { id } = req.params;
     try {
