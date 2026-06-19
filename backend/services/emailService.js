@@ -1,15 +1,9 @@
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.resend.com',
-  port: 587,
-  secure: false,
-  auth: { user: 'resend', pass: process.env.RESEND_API_KEY }
-});
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function enviarConfirmacionReserva(email, datos) {
   const { nombre, codigo, cancha, fecha, horaInicio, horaFin, monto } = datos;
-  await transporter.sendMail({
+  await resend.emails.send({
     from: 'Pacific Sport Center <onboarding@resend.dev>',
     to: email,
     subject: 'Reserva confirmada - ' + codigo,
@@ -19,7 +13,7 @@ async function enviarConfirmacionReserva(email, datos) {
 
 async function enviarCancelacionReserva(email, datos) {
   const { nombre, codigo, cancha, fecha, horaInicio, horaFin } = datos;
-  await transporter.sendMail({
+  await resend.emails.send({
     from: 'Pacific Sport Center <onboarding@resend.dev>',
     to: email,
     subject: 'Reserva cancelada - ' + codigo,
