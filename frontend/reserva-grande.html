@@ -170,8 +170,11 @@
 
     const horas = { manana: 6, tarde: 10, dia_completo: 16 };
     const horarios = { manana: '07:00 – 13:00', tarde: '13:00 – 23:00', dia_completo: '07:00 – 23:00' };
+    const descuentos = { manana: 0, tarde: 0.10, dia_completo: 0.20 };
     const h = horas[turno];
-    const total = canchasSeleccionadas.reduce((sum, c) => sum + parseFloat(c.precio) * h, 0);
+    const desc = descuentos[turno];
+    const precioBase = canchasSeleccionadas.reduce((sum, c) => sum + parseFloat(c.precio) * h, 0);
+    const total = precioBase * (1 - desc);
 
     detalle.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -179,6 +182,8 @@
         <tr><td style="padding:6px 0;color:#666">Turno</td><td><strong>${turno.replace('_',' ')} · ${horarios[turno]}</strong></td></tr>
         <tr><td style="padding:6px 0;color:#666">Canchas</td><td><strong>${canchasSeleccionadas.map(c=>c.nombre).join(', ')}</strong></td></tr>
         <tr><td style="padding:6px 0;color:#666">Horas</td><td><strong>${h} horas por cancha</strong></td></tr>
+        ${desc > 0 ? `<tr><td style="padding:6px 0;color:#666">Precio base</td><td>S/ ${precioBase.toFixed(2)}</td></tr>
+        <tr><td style="padding:6px 0;color:var(--green)">Descuento (${desc*100}%)</td><td style="color:var(--green)">- S/ ${(precioBase*desc).toFixed(2)}</td></tr>` : ''}
         <tr><td style="padding:6px 0;color:#666;font-size:15px">Total</td><td><strong style="color:var(--green);font-size:18px">S/ ${total.toFixed(2)}</strong></td></tr>
       </table>`;
 
