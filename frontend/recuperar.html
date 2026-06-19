@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recuperar contraseña — Pacific Sport Center</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body class="login-page">
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">🔑</div>
+      <h1>Recuperar contraseña</h1>
+      <p>Ingresa tu correo y te enviaremos instrucciones</p>
+    </div>
+    <div id="alert" class="alert hidden"></div>
+    <div class="form-group">
+      <label>Correo electrónico</label>
+      <input type="email" id="email" placeholder="tu@correo.com">
+    </div>
+    <button class="btn-primary btn-full" onclick="enviar()" id="btn">Enviar instrucciones</button>
+    <div class="login-links" style="margin-top:16px">
+      <a href="index.html">← Volver al inicio de sesión</a>
+    </div>
+  </div>
+</div>
+<script src="js/api.js"></script>
+<script>
+  async function enviar() {
+    const email = document.getElementById('email').value.trim();
+    const alerta = document.getElementById('alert');
+    const btn = document.getElementById('btn');
+    if (!email) { alerta.textContent='Ingresa tu correo'; alerta.className='alert alert-error'; return; }
+    btn.textContent='Enviando...'; btn.disabled=true;
+    try {
+      await api.post('/api/auth/forgot-password', { email }, false);
+      alerta.textContent='✅ Si el correo existe, recibirás instrucciones en breve. Revisa tu bandeja de entrada.';
+      alerta.className='alert alert-success';
+      btn.textContent='Enviado';
+    } catch(err) {
+      alerta.textContent=err.message; alerta.className='alert alert-error';
+      btn.textContent='Enviar instrucciones'; btn.disabled=false;
+    }
+  }
+  document.getElementById('email').addEventListener('keydown', e => { if(e.key==='Enter') enviar(); });
+</script>
+</body>
+</html>

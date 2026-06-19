@@ -21,4 +21,14 @@ async function enviarCancelacionReserva(email, datos) {
   });
 }
 
-module.exports = { enviarConfirmacionReserva, enviarCancelacionReserva };
+async function enviarRecuperacionPassword(email, datos) {
+  const { nombre, resetUrl } = datos;
+  await resend.emails.send({
+    from: 'Pacific Sport Center <onboarding@resend.dev>',
+    to: email,
+    subject: 'Recuperar contrasena - Pacific Sport Center',
+    html: '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><div style="background:#2d6a4f;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0">Pacific Sport Center</h1><p style="color:#b7e4c7;margin:6px 0 0">Recuperacion de contrasena</p></div><div style="background:#f8f9fa;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e0e0e0"><p>Hola <strong>' + nombre + '</strong>,</p><p>Recibimos una solicitud para restablecer tu contrasena. Haz click en el boton de abajo:</p><div style="text-align:center;margin:24px 0"><a href="' + resetUrl + '" style="background:#2d6a4f;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600">Restablecer contrasena</a></div><p style="font-size:13px;color:#666">Este enlace expira en 30 minutos. Si no solicitaste esto, ignora este correo.</p><p style="font-size:12px;color:#999">Pacific Sport Center - Trujillo, Peru</p></div></div>'
+  });
+}
+
+module.exports = { enviarConfirmacionReserva, enviarCancelacionReserva, enviarRecuperacionPassword };

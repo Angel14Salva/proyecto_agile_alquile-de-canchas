@@ -1,5 +1,6 @@
 'use strict';
 const bcrypt = require('bcryptjs');
+const { enviarRecuperacionPassword } = require('../services/emailService');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 const db     = require('../db/connection');
@@ -56,6 +57,12 @@ class AuthController {
       const token  = crypto.randomBytes(32).toString('hex');
       const expiry = new Date(Date.now() + 30 * 60 * 1000);
       await db.query('UPDATE usuarios SET reset_token = ?, reset_token_expiry = ? WHERE email = ?', [token, expiry, email]);
+      // Enviar correo con el token
+      const resetUrl = (process.env.FRONTEND_URL || 'https://pacific-sport-frontend.onrender.com') + '/reset-password.html?token=' + token;
+      try {
+        const [urows] = await db.query('SELECT nombre FROM usuarios WHERE email = ?', [email]);
+        await enviarRecuperacionPassword(email, { nombre: urows[0]?.nombre || 'Usuario', resetUrl });
+      } catch(mailErr) { console.error('Error enviando correo recuperacion:', mailErr.message); }
       res.json({ message: 'Si el correo existe, recibiras instrucciones en breve.' });
     } catch (err) {
       console.error('Error en forgotPassword:', err);
