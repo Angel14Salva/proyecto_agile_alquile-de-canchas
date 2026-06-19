@@ -10,6 +10,7 @@ const reservaRoutes = require('./routes/reservas');
 const flowRoutes    = require('./routes/flow');
 const usuarioRoutes = require('./routes/usuarios');
 const pagoRoutes    = require('./routes/pagos');
+const reservaGrandeRoutes = require('./routes/reservasGrandes');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 
 const app  = express();
@@ -40,6 +41,7 @@ app.use('/api/reservas', reservaRoutes);
 app.use('/api/pagos/flow', flowRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/pagos',    pagoRoutes);
+app.use('/api/reservas-grandes', reservaGrandeRoutes);
 
 app.get('*.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', req.path), (err) => {
