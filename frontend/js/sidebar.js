@@ -8,6 +8,7 @@ function renderSidebar(activePage) {
     { page: 'canchas',   href: 'canchas.html',   icon: '⚽', label: 'Canchas',       roles: ['admin','recepcionista','cliente'] },
     { page: 'reservar',  href: 'reservar.html',  icon: '📅', label: 'Reservar',       roles: ['admin','recepcionista','cliente'] },
     { page: 'mis-reservas', href: 'mis-reservas.html', icon: '📋', label: 'Mis reservas', roles: ['cliente'] },
+    { page: 'reserva-grande', href: 'reserva-grande.html', icon: '🏟️', label: 'Reserva grande', roles: ['admin','recepcionista','cliente'] },
     { page: 'reservas',  href: 'reservas.html',  icon: '📋', label: 'Reservas',       roles: ['admin','recepcionista'] },
     { page: 'recepcion', href: 'recepcion.html', icon: '🏢', label: 'Recepción',      roles: ['admin','recepcionista'] },
     { page: 'admin',     href: 'admin.html',     icon: '⚙️', label: 'Administración', roles: ['admin'] },
