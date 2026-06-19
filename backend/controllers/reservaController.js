@@ -1,5 +1,6 @@
 'use strict';
 const db = require('../db/connection');
+const { enviarConfirmacionReserva, enviarCancelacionReserva } = require('../services/emailService');
 
 class ReservaController {
   async #generarCodigo() {
@@ -55,6 +56,22 @@ class ReservaController {
       const codigo = `RES-${anio}-${num}`;
       const [result] = await db.query('INSERT INTO reservas (codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, origen, notas) VALUES (?, ?, ?, ?, ?, ?, "pendiente", ?, ?)', [codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, origen || 'linea', notas || null]);
       res.status(201).json({ message: 'Reserva creada exitosamente', reserva_id: result.insertId, codigo, estado: 'pendiente' });
+      // Enviar correo de confirmación
+      try {
+        const [urows] = await db.query('SELECT nombre, email FROM usuarios WHERE id = ?', [usuario_id]);
+        const [crows2] = await db.query('SELECT nombre FROM canchas WHERE id = ?', [cancha_id]);
+        if (urows.length > 0) {
+          await enviarConfirmacionReserva(urows[0].email, {
+            nombre: urows[0].nombre,
+            codigo,
+            cancha: crows2[0]?.nombre || '',
+            fecha,
+            horaInicio: hora_inicio.substring(0,5),
+            horaFin: hora_fin.substring(0,5),
+            monto: cancha[0].precio_hora
+          });
+        }
+      } catch(mailErr) { console.error('Error enviando correo:', mailErr.message); }
     } catch (err) {
       console.error('Error en create reserva:', err);
       res.status(500).json({ error: 'Error al crear reserva' });
@@ -100,6 +117,20 @@ class ReservaController {
       }
       await db.query('UPDATE reservas SET estado = "cancelada" WHERE id = ?', [id]);
       res.json({ message: 'Reserva cancelada correctamente' });
+      // Enviar correo de cancelación
+      try {
+        const [urows] = await db.query('SELECT u.nombre, u.email FROM usuarios u JOIN reservas r ON r.usuario_id = u.id WHERE r.id = ?', [id]);
+        if (urows.length > 0) {
+          await enviarCancelacionReserva(urows[0].email, {
+            nombre: urows[0].nombre,
+            codigo: reserva.codigo,
+            cancha: reserva.cancha_nombre || '',
+            fecha: reserva.fecha?.substring(0,10),
+            horaInicio: reserva.hora_inicio?.substring(0,5),
+            horaFin: reserva.hora_fin?.substring(0,5)
+          });
+        }
+      } catch(mailErr) { console.error('Error enviando correo cancelacion:', mailErr.message); }
     } catch (err) {
       console.error('Error en cancel reserva:', err);
       res.status(500).json({ error: 'Error al cancelar reserva' });
