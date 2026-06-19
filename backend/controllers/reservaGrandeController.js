@@ -40,8 +40,12 @@ class ReservaGrandeController {
 
       // Calcular precio total
       const [canchas] = await db.query('SELECT id, precio_hora FROM canchas WHERE id IN (?)', [cancha_ids]);
-      const horas = turno === 'dia_completo' ? 16 : 6;
-      const precioTotal = canchas.reduce((sum, c) => sum + parseFloat(c.precio_hora) * horas, 0);
+      const horas = { manana: 6, tarde: 10, dia_completo: 16 };
+      const descuento = { manana: 0, tarde: 0.10, dia_completo: 0.20 };
+      const h = horas[turno];
+      const desc = descuento[turno];
+      const precioBase = canchas.reduce((sum, c) => sum + parseFloat(c.precio_hora) * h, 0);
+      const precioTotal = precioBase * (1 - desc);
 
       // Generar código
       const anio = new Date().getFullYear();
