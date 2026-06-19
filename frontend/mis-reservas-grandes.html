@@ -64,7 +64,7 @@
             <td><strong>${r.nombre_org}</strong>${r.ruc ? `<br><span style="font-size:11px;color:var(--gray-muted)">RUC: ${r.ruc}</span>` : ''}</td>
             <td>${r.fecha?.substring(0,10)}</td>
             <td>${turnos[r.turno]||r.turno}<br><span style="font-size:11px;color:var(--gray-muted)">${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</span></td>
-            <td>${r.num_canchas} canchas</td>
+            <td>${r.canchas ? r.canchas.map(c=>c.nombre).join(", ") : r.num_canchas + " canchas"}</td>
             <td><strong>S/ ${parseFloat(r.precio_total).toFixed(2)}</strong></td>
             <td>${badge(r.estado)}</td>
             <td>${r.estado === 'pendiente' ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}</td>

@@ -27,7 +27,7 @@ class ReservaGrandeController {
     const { inicio, fin } = turnos[turno];
 
     try {
-      // Verificar disponibilidad de todas las canchas
+      // Verificar disponibilidad en reservas normales Y grandes
       for (const cancha_id of cancha_ids) {
         const [ocupado] = await db.query(
           `SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado != 'cancelada'
@@ -35,7 +35,17 @@ class ReservaGrandeController {
           [cancha_id, fecha, inicio, fin, inicio, fin, inicio, fin]
         );
         if (ocupado.length > 0)
-          return res.status(409).json({ error: `La cancha ${cancha_id} no está disponible en ese turno` });
+          return res.status(409).json({ error: `La cancha ${cancha_id} no está disponible en ese turno (reserva normal)` });
+
+        const [ocupadoGrande] = await db.query(
+          `SELECT rgc.id FROM reservas_grandes_canchas rgc
+           JOIN reservas_grandes rg ON rgc.reserva_grande_id = rg.id
+           WHERE rgc.cancha_id = ? AND rg.fecha = ? AND rg.estado != 'cancelada'
+           AND ((rg.hora_inicio >= ? AND rg.hora_inicio < ?) OR (rg.hora_fin > ? AND rg.hora_fin <= ?) OR (rg.hora_inicio <= ? AND rg.hora_fin >= ?))`,
+          [cancha_id, fecha, inicio, fin, inicio, fin, inicio, fin]
+        );
+        if (ocupadoGrande.length > 0)
+          return res.status(409).json({ error: `La cancha ${cancha_id} ya tiene una reserva grande en ese turno` });
       }
 
       // Calcular precio total
@@ -99,6 +109,15 @@ class ReservaGrandeController {
       if (rol === 'cliente') { query += ' AND rg.usuario_id = ?'; params.push(userId); }
       query += ' ORDER BY rg.fecha ASC';
       const [reservas] = await db.query(query, params);
+      // Agregar canchas a cada reserva
+      for (const r of reservas) {
+        const [canchas] = await db.query(
+          `SELECT c.id, c.nombre, c.deporte FROM canchas c
+            JOIN reservas_grandes_canchas rgc ON rgc.cancha_id = c.id
+            WHERE rgc.reserva_grande_id = ?`, [r.id]
+        );
+        r.canchas = canchas;
+      }
       res.json(reservas);
     } catch(err) {
       res.status(500).json({ error: 'Error al obtener reservas grandes' });
