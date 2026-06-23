@@ -24,7 +24,7 @@
     <main class="content">
 
       <!-- Tabs de navegación interna -->
-      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--gray-border);padding-bottom:0">
+      <div id="tabsBar" style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--gray-border);padding-bottom:0">
         <button class="tab-btn active" id="tabUsuariosBtn"  onclick="mostrarTab('usuarios')">👥 Gestión de usuarios</button>
         <button class="tab-btn"        id="tabCanchasBtn"   onclick="mostrarTab('canchas')">⚽ Canchas</button>
         <button class="tab-btn"        id="tabInformesBtn"  onclick="mostrarTab('informes')">📊 Exportar informes</button>
@@ -120,7 +120,7 @@
 
   if (_hash) {
     mostrarTab(_hash);
-    const tabsBar = document.querySelector('.tabs');
+    const tabsBar = document.getElementById('tabsBar');
     if (tabsBar) tabsBar.style.display = 'none';
   }
 
