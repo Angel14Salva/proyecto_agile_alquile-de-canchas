@@ -3,6 +3,7 @@
 const FlowApi = require('flowcl-node-api-client');
 const db      = require('../db/connection');
 
+console.log("FLOW ENV:", process.env.FLOW_API_KEY?.substring(0,8), process.env.FLOW_SECRET_KEY?.substring(0,8));
 const flowConfig = {
   apiKey    : process.env.FLOW_API_KEY,
   secretKey : process.env.FLOW_SECRET_KEY,
