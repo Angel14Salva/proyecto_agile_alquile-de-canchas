@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Administración — Pacific Sport Center</title>
+<title>Panel Gerente — Pacific Sport Center</title>
 <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -22,18 +22,22 @@
   <div class="main-wrap">
     <nav class="sidebar" id="sidebar"></nav>
     <main class="content">
-      <div class="page-header">
-        <div class="page-title">Administración</div>
+
+      <!-- Tabs de navegación interna -->
+      <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--gray-border);padding-bottom:0">
+        <button class="tab-btn active" id="tabUsuariosBtn"  onclick="mostrarTab('usuarios')">👥 Gestión de usuarios</button>
+        <button class="tab-btn"        id="tabCanchasBtn"   onclick="mostrarTab('canchas')">⚽ Canchas</button>
+        <button class="tab-btn"        id="tabInformesBtn"  onclick="mostrarTab('informes')">📊 Exportar informes</button>
       </div>
 
       <div id="alert" class="alert hidden"></div>
 
-      <div class="grid2">
-        <!-- USUARIOS -->
+      <!-- ── TAB: USUARIOS ────────────────────────────────────────── -->
+      <div id="tabUsuarios">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div class="card-title" style="margin:0">👥 Usuarios</div>
-            <button class="btn-primary btn-sm" onclick="toggleFormUsuario()">+ Agregar</button>
+            <div class="card-title" style="margin:0">👥 Usuarios del sistema</div>
+            <button class="btn-primary btn-sm" onclick="toggleFormUsuario()">+ Nuevo usuario</button>
           </div>
 
           <div id="formUsuario" style="display:none;margin-bottom:14px;padding:12px;background:var(--gray-bg);border-radius:8px">
@@ -47,7 +51,7 @@
                 <select id="uRol">
                   <option value="cliente">Cliente</option>
                   <option value="recepcionista">Recepcionista</option>
-                  <option value="admin">Admin</option>
+                  <option value="admin">Gerente</option>
                 </select>
               </div>
             </div>
@@ -56,35 +60,52 @@
               <div class="form-group"><label>DNI</label><input type="text" id="uDni" placeholder="12345678"></div>
             </div>
             <button class="btn-primary" onclick="crearUsuario()">Crear usuario</button>
+            <button class="btn-secondary" style="margin-left:8px" onclick="toggleFormUsuario()">Cancelar</button>
           </div>
 
           <div id="listaUsuarios"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
         </div>
+      </div>
 
-        <!-- CANCHAS CONFIG -->
+      <!-- ── TAB: CANCHAS ─────────────────────────────────────────── -->
+      <div id="tabCanchas" style="display:none">
         <div class="card">
-          <div class="card-title">⚽ Configuración de canchas</div>
+          <div class="card-title">⚽ Canchas registradas</div>
           <div id="listaCanchas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
         </div>
       </div>
 
-      <!-- REPORTES -->
-      <div class="card">
-        <div class="card-title">📊 Exportar reportes</div>
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
-          <div style="padding:12px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-            <div><div style="font-size:13px;font-weight:600">Reservas del día</div><div style="font-size:12px;color:var(--gray-muted)" id="fechaReporte"></div></div>
-            <button class="btn-secondary btn-sm" onclick="exportarCSV()">📄 CSV</button>
-          </div>
-          <div style="padding:12px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-            <div><div style="font-size:13px;font-weight:600">Lista de canchas</div><div style="font-size:12px;color:var(--gray-muted)">Con precios y horarios</div></div>
-            <button class="btn-secondary btn-sm" onclick="exportarCanchasCSV()">📄 CSV</button>
+      <!-- ── TAB: INFORMES ────────────────────────────────────────── -->
+      <div id="tabInformes" style="display:none">
+        <div class="card">
+          <div class="card-title">📊 Exportar reportes</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px">
+            <div style="padding:14px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600">Reservas del día</div>
+                <div style="font-size:12px;color:var(--gray-muted)" id="fechaReporte"></div>
+              </div>
+              <button class="btn-secondary btn-sm" onclick="exportarReservasCSV()">📄 CSV</button>
+            </div>
+            <div style="padding:14px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:13px;font-weight:600">Lista de canchas</div>
+                <div style="font-size:12px;color:var(--gray-muted)">Con precios y horarios</div>
+              </div>
+              <button class="btn-secondary btn-sm" onclick="exportarCanchasCSV()">📄 CSV</button>
+            </div>
           </div>
         </div>
       </div>
+
     </main>
   </div>
 </div>
+
+<style>
+  .tab-btn { padding:8px 16px;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:13px;font-weight:500;color:var(--gray-text);margin-bottom:-2px; }
+  .tab-btn.active { border-bottom-color:var(--green);color:var(--green);font-weight:600; }
+</style>
 
 <script src="js/api.js"></script>
 <script src="js/auth.js"></script>
@@ -96,8 +117,20 @@
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
   document.getElementById('fechaReporte').textContent = new Date().toLocaleDateString('es-PE');
 
+  // Abrir tab según hash en URL (ej: admin.html#usuarios)
+  const hash = window.location.hash.replace('#','');
+  if (hash) mostrarTab(hash);
+
   let canchasData = [];
-  let reservasData = [];
+
+  function mostrarTab(tab) {
+    ['usuarios','canchas','informes'].forEach(t => {
+      document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display = t === tab ? '' : 'none';
+      document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}Btn`).classList.toggle('active', t === tab);
+    });
+    if (tab === 'canchas'  && !canchasData.length) cargarCanchas();
+    if (tab === 'informes' && !canchasData.length) cargarCanchas();
+  }
 
   function toggleFormUsuario() {
     const f = document.getElementById('formUsuario');
@@ -105,7 +138,7 @@
   }
 
   async function crearUsuario() {
-    const alert = document.getElementById('alert');
+    const alerta = document.getElementById('alert');
     try {
       await api.post('/api/usuarios', {
         nombre:   document.getElementById('uNombre').value,
@@ -115,34 +148,33 @@
         telefono: document.getElementById('uTelefono').value || null,
         dni:      document.getElementById('uDni').value || null,
       });
-      alert.textContent = '✅ Usuario creado correctamente';
-      alert.className = 'alert alert-success';
-      document.getElementById('formUsuario').style.display = 'none';
+      alerta.textContent = '✅ Usuario creado correctamente';
+      alerta.className = 'alert alert-success';
+      toggleFormUsuario();
       cargarUsuarios();
     } catch(err) {
-      alert.textContent = err.message;
-      alert.className = 'alert alert-error';
+      alerta.textContent = err.message;
+      alerta.className = 'alert alert-error';
     }
   }
 
   async function cargarUsuarios() {
     try {
       const usuarios = await api.get('/api/usuarios');
+      const rolLabel = { admin:'Gerente', recepcionista:'Recepcionista', cliente:'Cliente' };
       const badgeRol = { admin:'badge-blue', recepcionista:'badge-amber', cliente:'badge-gray' };
-      document.getElementById('listaUsuarios').innerHTML = `
-        <table>
+      document.getElementById('listaUsuarios').innerHTML =
+        `<table>
           <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr></thead>
           <tbody>
-            ${usuarios.map(u => `
-              <tr>
-                <td><strong>${u.nombre}</strong></td>
-                <td style="font-size:12px;color:var(--gray-text)">${u.email}</td>
-                <td><span class="badge ${badgeRol[u.rol]||'badge-gray'}">${u.rol}</span></td>
-                <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
-              </tr>
-            `).join('')}
+            ${usuarios.map(u => `<tr>
+              <td><strong>${u.nombre}</strong></td>
+              <td style="font-size:12px;color:var(--gray-text)">${u.email}</td>
+              <td><span class="badge ${badgeRol[u.rol]||'badge-gray'}">${rolLabel[u.rol]||u.rol}</span></td>
+              <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
+            </tr>`).join('')}
           </tbody>
-        </table>`;
+         </table>`;
     } catch(err) {
       document.getElementById('listaUsuarios').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
@@ -152,31 +184,47 @@
     try {
       canchasData = await api.get('/api/canchas', false);
       const iconos = { futbol:'⚽', basketball:'🏀', volleyball:'🏐' };
-      document.getElementById('listaCanchas').innerHTML = `
-        <table>
-          <thead><tr><th>Cancha</th><th>Precio/hr</th><th>Horario</th><th>Estado</th></tr></thead>
+      document.getElementById('listaCanchas').innerHTML =
+        `<table>
+          <thead><tr><th>Cancha</th><th>Precio/hr</th><th>Horario</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
-            ${canchasData.map(c => `
-              <tr>
-                <td>${iconos[c.deporte]||'🏟️'} <strong>${c.nombre}</strong></td>
-                <td>S/ ${parseFloat(c.precio_hora).toFixed(2)}</td>
-                <td style="font-size:12px">${c.hora_apertura?.substring(0,5)} – ${c.hora_cierre?.substring(0,5)}</td>
-                <td><span class="badge badge-green">Activa</span></td>
-              </tr>
-            `).join('')}
+            ${canchasData.map(c => `<tr>
+              <td>${iconos[c.deporte]||'🏟️'} <strong>${c.nombre}</strong></td>
+              <td>S/ ${parseFloat(c.precio_hora).toFixed(2)}</td>
+              <td style="font-size:12px">${c.hora_apertura?.substring(0,5)} – ${c.hora_cierre?.substring(0,5)}</td>
+              <td><span class="badge ${c.activo?'badge-green':'badge-red'}">${c.activo?'Activa':'Inactiva'}</span></td>
+              <td>
+                <button class="btn-sm ${c.activo?'btn-danger':'btn-primary'}"
+                  onclick="toggleCancha(${c.id},${c.activo})">
+                  ${c.activo?'Deshabilitar':'Habilitar'}
+                </button>
+              </td>
+            </tr>`).join('')}
           </tbody>
-        </table>`;
+         </table>`;
     } catch(err) {
       document.getElementById('listaCanchas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
   }
 
-  async function exportarCSV() {
+  async function toggleCancha(id, activo) {
+    if (!confirm(`¿Deseas ${activo?'deshabilitar':'habilitar'} esta cancha?`)) return;
+    try {
+      await api.put(`/api/canchas/${id}`, { activo: !activo });
+      cargarCanchas();
+    } catch(err) {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    }
+  }
+
+  async function exportarReservasCSV() {
     try {
       const fecha = new Date().toISOString().split('T')[0];
-      reservasData = await api.get(`/api/reservas?fecha=${fecha}`);
+      const reservas = await api.get(`/api/reservas?fecha=${fecha}`);
       const rows = [['ID','Código','Cancha','Cliente','Fecha','Hora inicio','Hora fin','Estado','Pago']];
-      reservasData.forEach(r => rows.push([r.id, r.codigo||'', r.cancha_nombre, r.cliente_nombre, r.fecha, r.hora_inicio?.substring(0,5), r.hora_fin?.substring(0,5), r.estado, r.pago_estado||'pendiente']));
+      reservas.forEach(r => rows.push([r.id, r.codigo||'', r.cancha_nombre, r.cliente_nombre,
+        r.fecha, r.hora_inicio?.substring(0,5), r.hora_fin?.substring(0,5), r.estado, r.pago_estado||'pendiente']));
       descargarCSV(rows, `reservas-${fecha}.csv`);
     } catch(err) {
       document.getElementById('alert').textContent = err.message;
@@ -186,21 +234,21 @@
 
   function exportarCanchasCSV() {
     const rows = [['ID','Nombre','Deporte','Precio/hora','Apertura','Cierre']];
-    canchasData.forEach(c => rows.push([c.id, c.nombre, c.deporte, c.precio_hora, c.hora_apertura?.substring(0,5), c.hora_cierre?.substring(0,5)]));
+    canchasData.forEach(c => rows.push([c.id, c.nombre, c.deporte, c.precio_hora,
+      c.hora_apertura?.substring(0,5), c.hora_cierre?.substring(0,5)]));
     descargarCSV(rows, 'canchas.csv');
   }
 
   function descargarCSV(rows, filename) {
-    const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const csv  = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
     a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
   }
 
   cargarUsuarios();
-  cargarCanchas();
 </script>
 </body>
 </html>

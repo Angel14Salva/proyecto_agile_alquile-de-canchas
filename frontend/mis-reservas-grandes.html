@@ -40,6 +40,7 @@
 <script src="js/sidebar.js"></script>
 <script>
   requireAuth();
+  requireRole('cliente');
   renderSidebar('reserva-grande');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 

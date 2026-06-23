@@ -34,10 +34,10 @@
             <option value="basketball">🏀 Basketball</option>
             <option value="volleyball">🏐 Volleyball</option>
           </select>
-          <a href="reservar.html" class="btn-primary">+ Reservar</a>
         </div>
       </div>
 
+      <div id="alert" class="alert hidden"></div>
       <div class="grid3" id="canchasGrid">
         <div class="loading"><span class="spinner"></span>Cargando canchas...</div>
       </div>
@@ -51,15 +51,20 @@
 <script>
   requireAuth();
   renderSidebar('canchas');
-  document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 
+  const usuario = api.getUsuario();
+  const rol     = usuario?.rol;
+  document.getElementById('topbarUser').textContent = `👤 ${usuario.nombre}`;
+
+  const esAdmin   = rol === 'admin';
+  const iconos    = { futbol:'⚽', basketball:'🏀', volleyball:'🏐' };
   let todasCanchas = [];
 
   async function cargar() {
     try {
       todasCanchas = await api.get('/api/canchas', false);
       document.getElementById('subtitulo').textContent = `${todasCanchas.length} canchas registradas`;
-      renderCanchas(todasCanchas);
+      filtrar();
     } catch(err) {
       document.getElementById('canchasGrid').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
@@ -67,29 +72,63 @@
 
   function filtrar() {
     const deporte = document.getElementById('filtroDeporte').value;
-    const filtradas = deporte ? todasCanchas.filter(c => c.deporte === deporte) : todasCanchas;
-    renderCanchas(filtradas);
+    const lista   = deporte ? todasCanchas.filter(c => c.deporte === deporte) : todasCanchas;
+    renderCanchas(lista);
   }
 
   function renderCanchas(canchas) {
     if (canchas.length === 0) {
-      document.getElementById('canchasGrid').innerHTML = '<div class="empty"><div class="empty-icon">⚽</div>No hay canchas disponibles</div>';
+      document.getElementById('canchasGrid').innerHTML =
+        '<div class="empty"><div class="empty-icon">⚽</div>No hay canchas disponibles</div>';
       return;
     }
 
-    const iconos = { futbol: '⚽', basketball: '🏀', volleyball: '🏐', otro: '🏟️' };
-
     document.getElementById('canchasGrid').innerHTML = canchas.map(c => `
-      <div class="cancha-card" onclick="window.location.href='reservar.html?cancha=${c.id}'">
-        <div class="cancha-thumb">${iconos[c.deporte] || '🏟️'}</div>
+      <div class="cancha-card">
+        <div class="cancha-thumb">${iconos[c.deporte]||'🏟️'}</div>
         <div class="cancha-name">${c.nombre}</div>
         <div class="cancha-price">S/ ${parseFloat(c.precio_hora).toFixed(2)} / hora</div>
         <div class="cancha-meta">
           <span class="cancha-hours">${c.hora_apertura?.substring(0,5)} – ${c.hora_cierre?.substring(0,5)}</span>
-          <span class="badge badge-green">Activa</span>
+          <span class="badge ${c.activo ? 'badge-green' : 'badge-red'}">${c.activo ? 'Activa' : 'Inactiva'}</span>
         </div>
+        ${esAdmin ? adminActions(c) : clienteAction(c)}
       </div>
     `).join('');
+  }
+
+  // Cliente: botón "Reservar esta cancha" que pre-selecciona la cancha
+  function clienteAction(c) {
+    return `<a href="reservar.html?cancha=${c.id}" class="btn-primary btn-full" style="margin-top:10px">
+      📅 Reservar esta cancha
+    </a>`;
+  }
+
+  // Admin: editar y habilitar/deshabilitar
+  function adminActions(c) {
+    return `<div style="display:flex;gap:6px;margin-top:10px">
+      <button class="btn-secondary btn-sm" style="flex:1" onclick="editarCancha(${c.id})">✏️ Editar</button>
+      <button class="btn-sm ${c.activo ? 'btn-danger' : 'btn-primary'}" style="flex:1"
+        onclick="toggleCancha(${c.id}, ${c.activo})">
+        ${c.activo ? '🚫 Deshabilitar' : '✅ Habilitar'}
+      </button>
+    </div>`;
+  }
+
+  async function toggleCancha(id, activo) {
+    const accion = activo ? 'deshabilitar' : 'habilitar';
+    if (!confirm(`¿Deseas ${accion} esta cancha?`)) return;
+    try {
+      await api.put(`/api/canchas/${id}`, { activo: !activo });
+      cargar();
+    } catch(err) {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    }
+  }
+
+  function editarCancha(id) {
+    window.location.href = `admin.html?editar=${id}`;
   }
 
   cargar();
