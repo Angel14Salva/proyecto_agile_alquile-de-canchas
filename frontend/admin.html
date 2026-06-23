@@ -257,7 +257,7 @@
         `<table>
           <thead><tr><th>Cancha</th><th>Precio/hr</th><th>Horario</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
-            ${canchasData.map(c => `<tr>
+            ${canchasData.map(c => `<tr id="row-${c.id}">
               <td>${iconos[c.deporte]||'🏟️'} <strong>${c.nombre}</strong></td>
               <td>S/ ${parseFloat(c.precio_hora).toFixed(2)}</td>
               <td style="font-size:12px">${c.hora_apertura?.substring(0,5)} – ${c.hora_cierre?.substring(0,5)}</td>
@@ -265,6 +265,20 @@
               <td>
                 <button class="btn-secondary btn-sm" onclick="editarCanchaInline(${c.id})">Editar</button>
                 <button class="btn-sm ${c.activo?'btn-danger':'btn-primary'}" onclick="toggleCancha(${c.id},${c.activo})">${c.activo?'Deshabilitar':'Habilitar'}</button>
+              </td>
+            </tr>
+            <tr id="edit-row-${c.id}" style="display:none;background:var(--green-light)">
+              <td colspan="5" style="padding:12px">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+                  <div><label style="font-size:11px;font-weight:600">Nombre</label><input id="edit-nombre-${c.id}" class="form-control" value="${c.nombre}"></div>
+                  <div><label style="font-size:11px;font-weight:600">Precio/hr (S/)</label><input id="edit-precio-${c.id}" class="form-control" type="number" value="${c.precio_hora}"></div>
+                  <div><label style="font-size:11px;font-weight:600">Apertura</label><input id="edit-apertura-${c.id}" class="form-control" value="${c.hora_apertura?.substring(0,5)}"></div>
+                  <div><label style="font-size:11px;font-weight:600">Cierre</label><input id="edit-cierre-${c.id}" class="form-control" value="${c.hora_cierre?.substring(0,5)}"></div>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn-primary btn-sm" onclick="guardarCanchaInline(${c.id})">💾 Guardar</button>
+                    <button class="btn-secondary btn-sm" onclick="cerrarEdicion(${c.id})">✕</button>
+                  </div>
+                </div>
               </td>
             </tr>`).join('')}
           </tbody>
@@ -286,23 +300,27 @@
   }
 
   function editarCanchaInline(id) {
-    const c = canchasData.find(x => x.id === id);
-    if (!c) return;
-    const nombre = prompt('Nombre:', c.nombre);
-    if (nombre === null) return;
-    const precio = prompt('Precio por hora (S/):', c.precio_hora);
-    if (precio === null) return;
-    const apertura = prompt('Hora apertura (HH:MM):', c.hora_apertura?.substring(0,5));
-    if (apertura === null) return;
-    const cierre = prompt('Hora cierre (HH:MM):', c.hora_cierre?.substring(0,5));
-    if (cierre === null) return;
-    api.put(`/api/canchas/${id}`, {
-      nombre, precio_hora: parseFloat(precio),
-      hora_apertura: apertura + ':00', hora_cierre: cierre + ':00'
-    }).then(() => cargarCanchas()).catch(err => {
+    document.querySelectorAll('[id^="edit-row-"]').forEach(r => r.style.display = 'none');
+    document.getElementById('edit-row-' + id).style.display = '';
+  }
+  function cerrarEdicion(id) {
+    document.getElementById('edit-row-' + id).style.display = 'none';
+  }
+  async function guardarCanchaInline(id) {
+    const nombre   = document.getElementById('edit-nombre-' + id).value;
+    const precio   = document.getElementById('edit-precio-' + id).value;
+    const apertura = document.getElementById('edit-apertura-' + id).value;
+    const cierre   = document.getElementById('edit-cierre-' + id).value;
+    try {
+      await api.put('/api/canchas/' + id, {
+        nombre, precio_hora: parseFloat(precio),
+        hora_apertura: apertura + ':00', hora_cierre: cierre + ':00'
+      });
+      await cargarCanchas();
+    } catch(err) {
       document.getElementById('alert').textContent = err.message;
       document.getElementById('alert').className = 'alert alert-error';
-    });
+    }
   }
 
   async function exportarReservasCSV() {
