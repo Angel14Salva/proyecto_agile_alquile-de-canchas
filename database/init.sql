@@ -47,6 +47,8 @@ CREATE TABLE reservas (
   estado        ENUM('pendiente', 'confirmada', 'cancelada', 'completada') NOT NULL DEFAULT 'pendiente',
   origen        ENUM('linea', 'recepcion') NOT NULL DEFAULT 'linea',
   notas         TEXT,
+  cliente_nombre VARCHAR(100) NULL,
+  cliente_dni    CHAR(8)      NULL,
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (cancha_id)  REFERENCES canchas(id)  ON DELETE RESTRICT,

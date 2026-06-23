@@ -82,9 +82,25 @@
           </div>
         </div>
 
-        <!-- PASO 3: Pago -->
+        <!-- PASO 3: Datos del cliente -->
+        <div class="card" id="cardCliente" style="display:none">
+          <div class="card-title">3. Datos del cliente</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre completo <span style="color:var(--red)">*</span></label>
+              <input type="text" id="clienteNombre" placeholder="Ej: Juan Pérez García" oninput="validarDatosCliente()">
+            </div>
+            <div class="form-group">
+              <label>DNI <span style="color:var(--red)">*</span></label>
+              <input type="text" id="clienteDni" placeholder="8 dígitos numéricos" maxlength="8" oninput="validarDatosCliente()">
+              <div id="dniError" style="font-size:11px;color:var(--red);margin-top:4px;display:none">El DNI debe tener exactamente 8 dígitos numéricos</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 4: Pago -->
         <div class="card" id="cardPago" style="display:none">
-          <div class="card-title">3. Confirmar y pagar</div>
+          <div class="card-title">4. Confirmar y pagar</div>
           <div class="form-row">
             <div class="form-group">
               <label>Método de pago</label>
@@ -127,16 +143,34 @@
   renderSidebar('reservar');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 
+  const usuario = api.getUsuario();
   let canchas = [];
   let slotSeleccionado = null;
   let precioHora = 0;
 
-  // Fecha mínima = hoy
-  const hoy = new Date().toISOString().split('T')[0];
-  document.getElementById('fecha').min = hoy;
-  document.getElementById('fecha').value = hoy;
+  // Fecha mínima = hoy, máxima = hoy + 7 días (usando fecha local, no UTC)
+  const hoy = new Date();
+  const maxFecha = new Date(hoy);
+  maxFecha.setDate(maxFecha.getDate() + 7);
+  const toISO = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
-  // Cargar canchas al inicio
+  const inputFecha = document.getElementById('fecha');
+  inputFecha.min   = toISO(hoy);
+  inputFecha.max   = toISO(maxFecha);
+  inputFecha.value = toISO(hoy);
+
+  // Pre-rellenar nombre y DNI solo si el usuario es cliente (sus propios datos)
+  // El recepcionista ingresa los datos del cliente que atiende, no los suyos
+  if (usuario.rol === 'cliente') {
+    if (usuario.nombre) document.getElementById('clienteNombre').value = usuario.nombre;
+    if (usuario.dni && /^\d{8}$/.test(usuario.dni)) document.getElementById('clienteDni').value = usuario.dni;
+  }
+
   async function cargarCanchas() {
     canchas = await api.get('/api/canchas', false);
     filtrarCanchas();
@@ -148,8 +182,13 @@
     const select = document.getElementById('cancha');
     select.innerHTML = '<option value="">Selecciona una cancha</option>' +
       filtradas.map(c => `<option value="${c.id}" data-precio="${c.precio_hora}">${c.nombre} — S/ ${parseFloat(c.precio_hora).toFixed(2)}/hr</option>`).join('');
+    resetDesdeSlot();
+  }
+
+  function resetDesdeSlot() {
     slotSeleccionado = null;
-    document.getElementById('cardPago').style.display = 'none';
+    document.getElementById('cardCliente').style.display = 'none';
+    document.getElementById('cardPago').style.display    = 'none';
     document.getElementById('slotsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--gray-muted);padding:20px">Selecciona una cancha</div>';
   }
 
@@ -158,11 +197,18 @@
     const fecha    = document.getElementById('fecha').value;
     if (!canchaId || !fecha) return;
 
+    // Bloquear fecha si está fuera del rango (por si el navegador no respeta min/max)
+    if (fecha < toISO(hoy) || fecha > toISO(maxFecha)) {
+      document.getElementById('slotsGrid').innerHTML = '<div style="color:var(--red);grid-column:1/-1;padding:10px">Fecha fuera del rango permitido (hoy — 7 días)</div>';
+      return;
+    }
+
     const opt = document.querySelector(`#cancha option[value="${canchaId}"]`);
     precioHora = parseFloat(opt?.dataset.precio || 0);
 
     slotSeleccionado = null;
-    document.getElementById('cardPago').style.display = 'none';
+    document.getElementById('cardCliente').style.display = 'none';
+    document.getElementById('cardPago').style.display    = 'none';
     document.getElementById('slotsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px"><span class="spinner"></span> Cargando horarios...</div>';
 
     try {
@@ -198,11 +244,31 @@
     const canchaOpt = document.querySelector(`#cancha option[value="${canchaId}"]`);
     const horaFin   = `${String(parseInt(hora.split(':')[0]) + 1).padStart(2,'0')}:00`;
 
-    document.getElementById('resumenCancha').textContent   = canchaOpt?.textContent || '—';
+    document.getElementById('resumenCancha').textContent    = canchaOpt?.textContent || '—';
     document.getElementById('resumenFechaHora').textContent = `${fecha} · ${hora} a ${horaFin} · 1 hora`;
-    document.getElementById('resumenPrecio').textContent   = `S/ ${precioHora.toFixed(2)}`;
-    document.getElementById('cardPago').style.display = 'block';
-    document.getElementById('cardPago').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    document.getElementById('resumenPrecio').textContent    = `S/ ${precioHora.toFixed(2)}`;
+
+    // Mostrar paso de datos del cliente; ocultar pago hasta validar
+    document.getElementById('cardCliente').style.display = 'block';
+    document.getElementById('cardPago').style.display    = 'none';
+    document.getElementById('cardCliente').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    validarDatosCliente();
+  }
+
+  function validarDatosCliente() {
+    const nombre = document.getElementById('clienteNombre').value.trim();
+    const dni    = document.getElementById('clienteDni').value.trim();
+    const dniOk  = /^\d{8}$/.test(dni);
+    const dniErr = document.getElementById('dniError');
+
+    dniErr.style.display = (dni.length > 0 && !dniOk) ? 'block' : 'none';
+
+    const listo = nombre.length > 0 && dniOk;
+    document.getElementById('cardPago').style.display = (slotSeleccionado && listo) ? 'block' : 'none';
+    if (slotSeleccionado && listo) {
+      document.getElementById('cardPago').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   async function confirmarReserva() {
@@ -210,35 +276,46 @@
     const fecha    = document.getElementById('fecha').value;
     const metodo   = document.getElementById('metodo').value;
     const notas    = document.getElementById('notas').value;
-    const alert    = document.getElementById('alert');
+    const nombre   = document.getElementById('clienteNombre').value.trim();
+    const dni      = document.getElementById('clienteDni').value.trim();
+    const alertEl  = document.getElementById('alert');
     const btn      = document.getElementById('btnConfirmar');
 
     if (!canchaId || !fecha || !slotSeleccionado) {
-      alert.textContent = 'Selecciona cancha, fecha y horario';
-      alert.className = 'alert alert-error';
+      alertEl.textContent = 'Selecciona cancha, fecha y horario';
+      alertEl.className   = 'alert alert-error';
+      return;
+    }
+    if (!nombre) {
+      alertEl.textContent = 'El nombre del cliente es obligatorio';
+      alertEl.className   = 'alert alert-error';
+      return;
+    }
+    if (!/^\d{8}$/.test(dni)) {
+      alertEl.textContent = 'El DNI debe tener exactamente 8 dígitos numéricos';
+      alertEl.className   = 'alert alert-error';
       return;
     }
 
     const horaFin = `${String(parseInt(slotSeleccionado.split(':')[0]) + 1).padStart(2,'0')}:00`;
     btn.textContent = 'Procesando...';
-    btn.disabled = true;
-    alert.className = 'alert hidden';
+    btn.disabled    = true;
+    alertEl.className = 'alert hidden';
 
     try {
       const reserva = await api.post('/api/reservas', {
-        cancha_id: parseInt(canchaId), fecha,
-        hora_inicio: slotSeleccionado + ':00',
-        hora_fin: horaFin + ':00',
-        notas: notas || null,
-        origen: 'linea'
+        cancha_id:      parseInt(canchaId),
+        fecha,
+        hora_inicio:    slotSeleccionado + ':00',
+        hora_fin:       horaFin + ':00',
+        notas:          notas || null,
+        cliente_nombre: nombre,
+        cliente_dni:    dni
       });
 
-      // Pago en linea via pasarela
+      // Pago en línea vía pasarela (solo clientes con método distinto a efectivo)
       if (metodo !== 'efectivo') {
-        const pagoResp = await api.post('/api/pagos/flow/crear', {
-          reserva_id: reserva.reserva_id
-        });
-        // Redirigir al checkout de pago
+        const pagoResp = await api.post('/api/pagos/flow/crear', { reserva_id: reserva.reserva_id });
         window.location.href = pagoResp.url;
         return;
       }
@@ -248,10 +325,10 @@
       document.getElementById('successMsg').classList.remove('hidden');
 
     } catch(err) {
-      alert.textContent = err.message;
-      alert.className = 'alert alert-error';
-      btn.textContent = 'Confirmar reserva →';
-      btn.disabled = false;
+      alertEl.textContent = err.message;
+      alertEl.className   = 'alert alert-error';
+      btn.textContent     = 'Confirmar reserva →';
+      btn.disabled        = false;
     }
   }
 

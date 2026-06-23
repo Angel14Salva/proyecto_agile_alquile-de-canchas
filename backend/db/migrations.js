@@ -33,6 +33,11 @@ async function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_audit_email   ON audit_log(email)`,
     `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at)`,
     `CREATE INDEX IF NOT EXISTS idx_tokens_expiry ON tokens_revocados(expiry)`,
+
+    // HU-05: datos del cliente en la reserva
+    `ALTER TABLE reservas
+       ADD COLUMN IF NOT EXISTS cliente_nombre VARCHAR(100) NULL,
+       ADD COLUMN IF NOT EXISTS cliente_dni    CHAR(8)      NULL`,
   ];
 
   for (const sql of migrations) {
