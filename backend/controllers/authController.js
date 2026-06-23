@@ -196,19 +196,30 @@ class AuthController {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'Token y contraseña requeridos' });
     if (password.length < 8) return res.status(400).json({ error: 'Mínimo 8 caracteres' });
+    const conn = await db.getConnection();
     try {
-      const [rows] = await db.query(
-        'SELECT id FROM usuarios WHERE reset_token = ? AND reset_token_expiry > NOW()',
+      await conn.beginTransaction();
+      const [rows] = await conn.query(
+        'SELECT id, email FROM usuarios WHERE reset_token = ? AND reset_token_expiry > NOW()',
         [token]
       );
-      if (rows.length === 0) return res.status(400).json({ error: 'Token inválido o expirado' });
+      if (rows.length === 0) {
+        await conn.rollback();
+        conn.release();
+        return res.status(400).json({ error: 'Token inválido o expirado' });
+      }
       const hash = await bcrypt.hash(password, 10);
-      await db.query(
+      await conn.query(
         'UPDATE usuarios SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?',
         [hash, rows[0].id]
       );
+      await conn.commit();
+      conn.release();
+      await registrarAudit(req, { usuarioId: rows[0].id, email: rows[0].email, accion: 'reset_password', resultado: 'exitoso' });
       res.json({ message: 'Contraseña actualizada correctamente' });
     } catch (err) {
+      await conn.rollback();
+      conn.release();
       console.error('Error en resetPassword:', err);
       res.status(500).json({ error: 'Error al resetear contraseña' });
     }
