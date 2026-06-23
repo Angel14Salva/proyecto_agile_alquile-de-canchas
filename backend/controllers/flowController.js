@@ -34,7 +34,7 @@ class FlowController {
         currency      : 'PEN',
         amount        : Math.round(parseFloat(r.precio_hora)),
         email         : r.email,
-        paymentMethod : 9,
+        paymentMethod : 11,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION,
         urlReturn     : process.env.FLOW_URL_RETORNO + '?reserva=' + reserva_id + '&status=success'
       };
