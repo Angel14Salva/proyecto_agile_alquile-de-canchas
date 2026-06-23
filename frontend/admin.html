@@ -110,13 +110,15 @@
 <script>
   requireAuth();
   requireRole('admin');
-  renderSidebar('admin');
+  const _hash = window.location.hash.replace('#','');
+  const _pageMap = { usuarios: 'admin-usuarios', informes: 'admin-export', canchas: 'admin' };
+  renderSidebar(_pageMap[_hash] || 'admin');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
   const _fr = document.getElementById('fechaReporte'); if(_fr) _fr.textContent = new Date().toLocaleDateString('es-PE');
 
   // Abrir tab según hash en URL (ej: admin.html#usuarios)
-  const hash = window.location.hash.replace('#','');
-  if (hash) mostrarTab(hash);
+
+  if (_hash) mostrarTab(_hash);
 
   let canchasData = [];
 
