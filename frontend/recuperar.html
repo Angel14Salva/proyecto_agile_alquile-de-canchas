@@ -15,13 +15,13 @@
       <p>Ingresa tu correo y te enviaremos instrucciones</p>
     </div>
     <div id="alert" class="alert hidden"></div>
-    <form id="recuperarForm">
+    <div id="recuperarForm">
       <div class="form-group">
         <label>Correo electrónico</label>
         <input type="email" id="email" placeholder="tu@correo.com" required>
       </div>
-      <button type="submit" class="btn-primary btn-full" id="btn">Enviar instrucciones</button>
-    </form>
+      <button type="button" class="btn-primary btn-full" id="btn" onclick="enviar()">Enviar instrucciones</button>
+    </div>
     <div class="login-links" style="margin-top:16px">
       <a href="index.html">← Volver al inicio de sesión</a>
     </div>
@@ -30,8 +30,7 @@
 <script src="js/api.js"></script>
 <script>
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  document.getElementById('recuperarForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  async function enviar() {
     const email = document.getElementById('email').value.trim();
     const alerta = document.getElementById('alert');
     const btn = document.getElementById('btn');
