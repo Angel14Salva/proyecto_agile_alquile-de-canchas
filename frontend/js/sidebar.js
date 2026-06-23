@@ -28,7 +28,9 @@ function renderSidebar(activePage) {
     <div class="sidebar-section" style="margin-top:auto">Sesión</div>
     <div style="padding:12px 16px;font-size:12px;color:var(--gray-muted)">
       ${usuario?.nombre}<br>
-      <span style="font-size:11px;background:var(--green-light);color:var(--green);padding:2px 7px;border-radius:10px;margin-top:4px;display:inline-block">${rol}</span>
+      <span style="font-size:11px;background:var(--green-light);color:var(--green);padding:2px 7px;border-radius:10px;margin-top:4px;display:inline-block">
+        ${{ admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' }[rol] || rol}
+      </span>
     </div>
   `;
 }

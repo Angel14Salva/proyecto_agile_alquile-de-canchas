@@ -16,6 +16,8 @@ CREATE TABLE usuarios (
   activo              BOOLEAN       NOT NULL DEFAULT TRUE,
   reset_token         VARCHAR(255),
   reset_token_expiry  DATETIME,
+  login_intentos      INT           NOT NULL DEFAULT 0,
+  bloqueado_hasta     DATETIME,
   created_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -65,6 +67,27 @@ CREATE TABLE pagos (
   FOREIGN KEY (reserva_id)     REFERENCES reservas(id)  ON DELETE RESTRICT,
   FOREIGN KEY (registrado_por) REFERENCES usuarios(id)  ON DELETE SET NULL
 );
+
+CREATE TABLE audit_log (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id  INT,
+  email       VARCHAR(150),
+  accion      VARCHAR(50)   NOT NULL,
+  ip          VARCHAR(45),
+  user_agent  VARCHAR(255),
+  resultado   ENUM('exitoso', 'fallido') NOT NULL,
+  detalle     VARCHAR(255),
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tokens_revocados (
+  jti         VARCHAR(64)   PRIMARY KEY,
+  expiry      DATETIME      NOT NULL
+);
+
+CREATE INDEX idx_audit_email     ON audit_log(email);
+CREATE INDEX idx_audit_created   ON audit_log(created_at);
+CREATE INDEX idx_tokens_expiry   ON tokens_revocados(expiry);
 
 CREATE INDEX idx_reservas_fecha   ON reservas(fecha);
 CREATE INDEX idx_reservas_cancha  ON reservas(cancha_id);

@@ -12,15 +12,38 @@ const usuarioRoutes = require('./routes/usuarios');
 const pagoRoutes    = require('./routes/pagos');
 const reservaGrandeRoutes = require('./routes/reservasGrandes');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
+const runMigrations = require('./db/migrations');
 
 const app  = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'"],
+      styleSrc:    ["'self'", "'unsafe-inline'"],   // inline styles para main.css
+      imgSrc:      ["'self'", 'data:'],
+      connectSrc:  ["'self'", process.env.FRONTEND_URL || '*'],
+      fontSrc:     ["'self'"],
+      objectSrc:   ["'none'"],
+      frameAncestors: ["'none'"],
+    }
+  },
+  hsts: {
+    maxAge: 31536000,       // 1 año
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+const allowedOrigins = process.env.FRONTEND_URL
+  ? [process.env.FRONTEND_URL]
+  : true; // desarrollo local: aceptar cualquier origen
 
 app.use(cors({
-  origin: true,
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -58,7 +81,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  await runMigrations();
 });

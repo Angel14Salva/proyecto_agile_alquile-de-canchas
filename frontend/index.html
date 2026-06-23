@@ -60,7 +60,10 @@
 
       api.setToken(data.token);
       api.setUsuario(data.usuario);
-      window.location.href = 'dashboard.html';
+
+      // Redirigir al panel según rol
+      const destino = { admin: 'dashboard.html', recepcionista: 'dashboard.html', cliente: 'dashboard.html' };
+      window.location.href = destino[data.usuario.rol] || 'dashboard.html';
 
     } catch (err) {
       alert.textContent = err.message;
