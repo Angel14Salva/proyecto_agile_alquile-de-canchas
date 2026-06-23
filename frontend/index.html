@@ -44,6 +44,13 @@
   // Si ya está logueado, redirigir al dashboard
   if (api.isLoggedIn()) window.location.href = 'dashboard.html';
 
+  // Mensaje de confirmación tras registro exitoso
+  if (new URLSearchParams(window.location.search).get('registered')) {
+    const a = document.getElementById('alert');
+    a.textContent = '✅ Cuenta creada correctamente. Ya puedes iniciar sesión.';
+    a.className = 'alert alert-success';
+  }
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('btnLogin');

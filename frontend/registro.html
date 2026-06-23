@@ -30,15 +30,13 @@
         <label>Contraseña</label>
         <input type="password" id="password" placeholder="Mínimo 8 caracteres" required minlength="8">
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Teléfono</label>
-          <input type="text" id="telefono" placeholder="999000000">
-        </div>
-        <div class="form-group">
-          <label>DNI</label>
-          <input type="text" id="dni" placeholder="12345678">
-        </div>
+      <div class="form-group">
+        <label>DNI</label>
+        <input type="text" id="dni" placeholder="12345678" required pattern="[0-9]{8}" maxlength="8" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label>Teléfono <span style="font-weight:400;color:#888">(opcional)</span></label>
+        <input type="text" id="telefono" placeholder="999000000">
       </div>
       <button type="submit" class="btn-primary btn-full" id="btnRegistro">Crear cuenta</button>
     </form>
@@ -53,30 +51,45 @@
 <script>
   if (api.isLoggedIn()) window.location.href = 'dashboard.html';
 
+  const DNI_RE   = /^[0-9]{8}$/;
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   document.getElementById('registroForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn   = document.getElementById('btnRegistro');
-    const alert = document.getElementById('alert');
+    const btn    = document.getElementById('btnRegistro');
+    const alerta = document.getElementById('alert');
+    const nombre   = document.getElementById('nombre').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const dni      = document.getElementById('dni').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+
+    alerta.className = 'alert hidden';
+
+    if (!nombre)  { alerta.textContent = 'El nombre completo es requerido';       alerta.className = 'alert alert-error'; return; }
+    if (!dni)     { alerta.textContent = 'El DNI es requerido';                   alerta.className = 'alert alert-error'; return; }
+    if (!DNI_RE.test(dni)) { alerta.textContent = 'El DNI debe tener exactamente 8 dígitos numéricos'; alerta.className = 'alert alert-error'; return; }
+    if (!email)   { alerta.textContent = 'El correo es requerido';                alerta.className = 'alert alert-error'; return; }
+    if (!EMAIL_RE.test(email)) { alerta.textContent = 'Ingresa un correo electrónico válido'; alerta.className = 'alert alert-error'; return; }
+    if (!password){ alerta.textContent = 'La contraseña es requerida';            alerta.className = 'alert alert-error'; return; }
+    if (password.length < 8) { alerta.textContent = 'La contraseña debe tener mínimo 8 caracteres'; alerta.className = 'alert alert-error'; return; }
+
     btn.textContent = 'Creando cuenta...';
     btn.disabled = true;
-    alert.className = 'alert hidden';
 
     try {
-      const data = await api.post('/api/auth/register', {
-        nombre:   document.getElementById('nombre').value.trim(),
-        email:    document.getElementById('email').value.trim(),
-        password: document.getElementById('password').value,
-        telefono: document.getElementById('telefono').value || null,
-        dni:      document.getElementById('dni').value || null,
+      await api.post('/api/auth/register', {
+        nombre, email, password, dni,
+        telefono: telefono || null,
       }, false);
 
-      api.setToken(data.token);
-      api.setUsuario(data.usuario);
-      window.location.href = 'dashboard.html';
+      alerta.textContent = '✅ Cuenta creada correctamente. Redirigiendo al inicio de sesión...';
+      alerta.className = 'alert alert-success';
+      setTimeout(() => window.location.href = 'index.html?registered=1', 2000);
 
     } catch(err) {
-      alert.textContent = err.message;
-      alert.className = 'alert alert-error';
+      alerta.textContent = err.message;
+      alerta.className = 'alert alert-error';
       btn.textContent = 'Crear cuenta';
       btn.disabled = false;
     }
