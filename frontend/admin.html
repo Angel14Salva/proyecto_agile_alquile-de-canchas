@@ -118,11 +118,12 @@
 
   // Abrir tab según hash en URL (ej: admin.html#usuarios)
 
+  let canchasData = [];
   if (_hash) {
     mostrarTab(_hash);
   }
 
-  let canchasData = [];
+
 
   function mostrarTab(tab) {
     ['usuarios','canchas','informes'].forEach(t => {
