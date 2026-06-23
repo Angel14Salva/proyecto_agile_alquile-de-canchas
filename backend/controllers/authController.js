@@ -72,7 +72,7 @@ class AuthController {
 
     try {
       const [rows] = await db.query(
-        'SELECT id, nombre, email, password_hash, rol, activo, login_intentos, bloqueado_hasta FROM usuarios WHERE email = ?',
+        'SELECT id, nombre, email, password_hash, rol, activo, login_intentos, bloqueado_hasta, dni FROM usuarios WHERE email = ?',
         [email]
       );
 
@@ -130,7 +130,7 @@ class AuthController {
       res.json({
         message: 'Login exitoso',
         token,
-        usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol }
+        usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol, dni: usuario.dni || null }
       });
 
     } catch (err) {

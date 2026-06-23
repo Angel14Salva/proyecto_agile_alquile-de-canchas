@@ -148,21 +148,27 @@
   let slotSeleccionado = null;
   let precioHora = 0;
 
-  // Fecha mínima = hoy, máxima = hoy + 7 días
+  // Fecha mínima = hoy, máxima = hoy + 7 días (usando fecha local, no UTC)
   const hoy = new Date();
   const maxFecha = new Date(hoy);
   maxFecha.setDate(maxFecha.getDate() + 7);
-  const toISO = d => d.toISOString().split('T')[0];
+  const toISO = d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
   const inputFecha = document.getElementById('fecha');
   inputFecha.min   = toISO(hoy);
   inputFecha.max   = toISO(maxFecha);
   inputFecha.value = toISO(hoy);
 
-  // Pre-rellenar nombre y DNI si el cliente ya tiene datos en su perfil
+  // Pre-rellenar nombre y DNI solo si el usuario es cliente (sus propios datos)
+  // El recepcionista ingresa los datos del cliente que atiende, no los suyos
   if (usuario.rol === 'cliente') {
     if (usuario.nombre) document.getElementById('clienteNombre').value = usuario.nombre;
-    if (usuario.dni)    document.getElementById('clienteDni').value    = usuario.dni;
+    if (usuario.dni && /^\d{8}$/.test(usuario.dni)) document.getElementById('clienteDni').value = usuario.dni;
   }
 
   async function cargarCanchas() {

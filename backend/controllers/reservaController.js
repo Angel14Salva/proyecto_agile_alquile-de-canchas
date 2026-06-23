@@ -13,7 +13,7 @@ class ReservaController {
     try {
       const { fecha, estado, cancha_id } = req.query;
       const { userId, rol } = req.user;
-      let query = 'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as cliente_nombre, u.email as cliente_email, u.telefono as cliente_telefono, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE 1=1';
+      let query = 'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as usuario_nombre, u.email as cliente_email, u.telefono as cliente_telefono, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE 1=1';
       const params = [];
       if (rol === 'cliente') { query += ' AND r.usuario_id = ?'; params.push(userId); }
       if (fecha)     { query += ' AND r.fecha = ?';     params.push(fecha); }
@@ -21,6 +21,11 @@ class ReservaController {
       if (cancha_id) { query += ' AND r.cancha_id = ?'; params.push(cancha_id); }
       query += ' ORDER BY r.fecha ASC, r.hora_inicio ASC';
       const [reservas] = await db.query(query, params);
+      // Normalizar: cliente_nombre = nombre guardado en reserva, o nombre del usuario si no existe
+      reservas.forEach(r => {
+        r.cliente_nombre = r.cliente_nombre || r.usuario_nombre;
+        delete r.usuario_nombre;
+      });
       res.json(reservas);
     } catch (err) {
       console.error('Error en getAll reservas:', err);
@@ -29,10 +34,13 @@ class ReservaController {
   }
   async getById(req, res) {
     try {
-      const [rows] = await db.query('SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as cliente_nombre, u.email as cliente_email, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE r.id = ?', [req.params.id]);
+      const [rows] = await db.query('SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as usuario_nombre, u.email as cliente_email, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE r.id = ?', [req.params.id]);
       if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
       if (req.user.rol === 'cliente' && rows[0].usuario_id !== req.user.userId) return res.status(403).json({ error: 'Acceso denegado' });
-      res.json(rows[0]);
+      const row = rows[0];
+      row.cliente_nombre = row.cliente_nombre || row.usuario_nombre;
+      delete row.usuario_nombre;
+      res.json(row);
     } catch (err) {
       res.status(500).json({ error: 'Error al obtener reserva' });
     }
@@ -177,11 +185,14 @@ class ReservaController {
     try {
       const { codigo } = req.params;
       const [rows] = await db.query(
-        'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as cliente_nombre, u.email as cliente_email, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE r.codigo = ?',
+        'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as usuario_nombre, u.email as cliente_email, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE r.codigo = ?',
         [codigo]
       );
       if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
-      res.json(rows[0]);
+      const row = rows[0];
+      row.cliente_nombre = row.cliente_nombre || row.usuario_nombre;
+      delete row.usuario_nombre;
+      res.json(row);
     } catch (err) {
       res.status(500).json({ error: 'Error al buscar reserva' });
     }
