@@ -22,7 +22,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'"],
+      scriptSrc:   ["'self'", "'unsafe-inline'"],
       styleSrc:    ["'self'", "'unsafe-inline'"],   // inline styles para main.css
       imgSrc:      ["'self'", 'data:'],
       connectSrc:  ["'self'", process.env.FRONTEND_URL || '*'],
