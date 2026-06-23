@@ -26,7 +26,6 @@ function renderSidebar(activePage) {
     { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',           roles: ['admin'] },
     { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',    roles: ['admin'] },
     { page: 'admin',            href: 'admin.html',             icon: '📊', label: 'Panel de informes',   roles: ['admin'] },
-    { page: 'admin-export',     href: 'admin.html#informes',    icon: '📤', label: 'Exportar informes',   roles: ['admin'] },
     { page: 'admin-usuarios',   href: 'admin.html#usuarios',    icon: '👥', label: 'Gestión de usuarios', roles: ['admin'] },
   ];
 
