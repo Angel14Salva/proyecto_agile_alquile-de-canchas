@@ -174,24 +174,54 @@
   async function cargarGerente() {
     try {
       const inicioMes = fechaStr.substring(0,7) + '-01';
-      const [reservasMes, canchas] = await Promise.all([
-        api.get(`/api/reservas?desde=${inicioMes}&hasta=${fechaStr}`),
-        api.get('/api/canchas', false)
-      ]);
+      const data = await api.get(`/api/reportes/dashboard?desde=${inicioMes}&hasta=${fechaStr}`);
 
-      const pagadas    = reservasMes.filter(r => r.pago_estado === 'pagado');
-      const pendientes = reservasMes.filter(r => r.pago_estado !== 'pagado');
-      const ingresos   = pagadas.reduce((s,r) => s + parseFloat(r.precio_hora||0), 0);
+      document.getElementById('gReservasMes').textContent  = data.metricas.reservas_totales;
+      document.getElementById('gIngresosMes').textContent  = `S/ ${data.metricas.ingresos.toFixed(2)}`;
+      document.getElementById('gPendientesMes').textContent = data.metricas.pendientes_pago;
 
-      document.getElementById('gReservasMes').textContent  = reservasMes.length;
-      document.getElementById('gIngresosMes').textContent  = `S/ ${ingresos.toFixed(2)}`;
-      document.getElementById('gCanchas').textContent      = canchas.length;
-      document.getElementById('gPendientesMes').textContent= pendientes.length;
+      const [canchas] = await Promise.all([api.get('/api/canchas', false)]);
+      document.getElementById('gCanchas').textContent = canchas.length;
 
-      renderGrafico(reservasMes, hoy);
-      renderRanking(reservasMes, canchas);
-      renderControlCaja(reservasMes);
+      renderGraficoDias(data.por_dia_semana);
+      renderRankingApi(data.ranking_canchas);
+      renderControlCajaApi(inicioMes, fechaStr);
     } catch(err) { console.error('Error gerente:', err); }
+  }
+
+  function renderGraficoDias(porDia) {
+    const max = Math.max(...porDia.map(d => d.total), 1);
+    document.getElementById('graficoSemanas').innerHTML =
+      `<div class="sparkline">${porDia.map(d => `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center">
+          <div class="spark-bar" style="width:100%;height:${Math.max(6, Math.round((d.total/max)*54))}px" title="${d.total}"></div>
+          <div class="spark-lbl">${d.dia.substring(0,3)}<br>${d.total}</div>
+        </div>`).join('')}</div>`;
+  }
+
+  function renderRankingApi(ranking) {
+    const max = Math.max(...ranking.map(r=>r.total), 1);
+    document.getElementById('rankingCanchas').innerHTML =
+      `<div class="bar-wrap">${ranking.slice(0,6).map((r,i) => `
+        <div class="bar-row">
+          <span class="bar-label">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${r.nombre}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.round((r.total/max)*100)}%"></div></div>
+          <span class="bar-val">${r.total}</span>
+        </div>`).join('')}</div>`;
+  }
+
+  async function renderControlCajaApi(desde, hasta) {
+    try {
+      const caja = await api.get(`/api/reportes/caja?desde=${desde}&hasta=${hasta}`);
+      if (!caja.length) {
+        document.getElementById('controlCaja').innerHTML = '<div class="empty"><div class="empty-icon">💵</div>Sin datos de caja</div>';
+        return;
+      }
+      document.getElementById('controlCaja').innerHTML =
+        `<table><thead><tr><th>Recepcionista</th><th>Efectivo</th><th>Digital</th><th>Total</th></tr></thead><tbody>
+          ${caja.map(c => `<tr><td>${c.nombre}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td><strong>S/ ${c.total.toFixed(2)}</strong></td></tr>`).join('')}
+        </tbody></table>`;
+    } catch(e) { console.error(e); }
   }
 
   function renderGrafico(reservas, hoy) {

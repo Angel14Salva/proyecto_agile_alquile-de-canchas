@@ -80,7 +80,7 @@ class FlowController {
         const [pagoExiste] = await db.query('SELECT id FROM pagos WHERE reserva_id = ?', [reserva_id]);
         if (pagoExiste.length === 0) {
           await db.query(
-            'INSERT INTO pagos (reserva_id, monto, metodo, estado, referencia) VALUES (?, ?, "flow", "pagado", ?)',
+            'INSERT INTO pagos (reserva_id, monto, metodo, estado, tipo_pago, referencia) VALUES (?, ?, "flow", "pagado", "completo", ?)',
             [reserva_id, cancha[0]?.precio_hora || 0, token]
           );
         }

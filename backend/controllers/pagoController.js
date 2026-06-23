@@ -1,36 +1,50 @@
 'use strict';
-const db = require('../db/connection');
+const pagoService = require('../services/pagoService');
 
 class PagoController {
   async registrar(req, res) {
-    const { reserva_id, metodo, referencia } = req.body;
-    if (!reserva_id || !metodo) return res.status(400).json({ error: 'reserva_id y metodo son requeridos' });
+    const { reserva_id } = req.body;
+    if (!reserva_id) return res.status(400).json({ error: 'reserva_id es requerido' });
+
+    const esStaff = ['recepcionista', 'admin'].includes(req.user.rol);
+    if (!esStaff) return res.status(403).json({ error: 'Solo recepcion puede registrar pagos presenciales' });
+
     try {
-      const [reserva] = await db.query('SELECT id, cancha_id, usuario_id, estado FROM reservas WHERE id = ?', [reserva_id]);
-      if (reserva.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
-      if (reserva[0].estado === 'cancelada') return res.status(400).json({ error: 'No se puede pagar una reserva cancelada' });
-      const [pagoExiste] = await db.query('SELECT id, estado FROM pagos WHERE reserva_id = ?', [reserva_id]);
-      if (pagoExiste.length > 0 && pagoExiste[0].estado === 'pagado') return res.status(409).json({ error: 'Esta reserva ya tiene un pago registrado' });
-      const [cancha] = await db.query('SELECT precio_hora FROM canchas WHERE id = ?', [reserva[0].cancha_id]);
-      const monto = cancha[0].precio_hora;
-      const registrado_por = ['recepcionista', 'admin'].includes(req.user.rol) ? req.user.userId : null;
-      if (pagoExiste.length > 0) {
-        await db.query('UPDATE pagos SET metodo = ?, estado = "pagado", referencia = ?, registrado_por = ? WHERE reserva_id = ?', [metodo, referencia || null, registrado_por, reserva_id]);
-      } else {
-        await db.query('INSERT INTO pagos (reserva_id, monto, metodo, estado, referencia, registrado_por) VALUES (?, ?, ?, "pagado", ?, ?)', [reserva_id, monto, metodo, referencia || null, registrado_por]);
-      }
-      await db.query('UPDATE reservas SET estado = "confirmada" WHERE id = ?', [reserva_id]);
-      res.status(201).json({ message: 'Pago registrado y reserva confirmada', monto, estado: 'pagado' });
+      const resultado = await pagoService.registrarPagoRecepcion({
+        reservaId: parseInt(reserva_id, 10),
+        body: req.body,
+        registradoPor: req.user.userId,
+        esSaldo: Boolean(req.body.es_saldo)
+      });
+      if (!resultado.ok) return res.status(resultado.status).json({ error: resultado.error });
+      res.status(201).json(resultado);
     } catch (err) {
       console.error('Error en registrar pago:', err);
       res.status(500).json({ error: 'Error al registrar pago' });
     }
   }
+
   async getByReserva(req, res) {
     try {
-      const [rows] = await db.query('SELECT p.*, u.nombre as registrado_por_nombre FROM pagos p LEFT JOIN usuarios u ON p.registrado_por = u.id WHERE p.reserva_id = ?', [req.params.reserva_id]);
+      const [rows] = await require('../db/connection').query(
+        `SELECT p.*, u.nombre AS registrado_por_nombre, c.numero AS comprobante_numero
+         FROM pagos p
+         LEFT JOIN usuarios u ON p.registrado_por = u.id
+         LEFT JOIN comprobantes c ON c.pago_id = p.id
+         WHERE p.reserva_id = ?`,
+        [req.params.reserva_id]
+      );
       if (rows.length === 0) return res.status(404).json({ error: 'Pago no encontrado' });
-      res.json(rows[0]);
+      const p = rows[0];
+      const saldo = pagoService.calcularSaldo(
+        (await require('../db/connection').query(
+          'SELECT c.precio_hora FROM reservas r JOIN canchas c ON r.cancha_id = c.id WHERE r.id = ?',
+          [req.params.reserva_id]
+        ))[0][0]?.precio_hora,
+        p.monto,
+        p.tipo_pago
+      );
+      res.json({ ...p, ...saldo });
     } catch (err) {
       res.status(500).json({ error: 'Error al obtener pago' });
     }

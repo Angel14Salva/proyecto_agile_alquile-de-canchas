@@ -11,6 +11,8 @@ const flowRoutes    = require('./routes/flow');
 const usuarioRoutes = require('./routes/usuarios');
 const pagoRoutes    = require('./routes/pagos');
 const reservaGrandeRoutes = require('./routes/reservasGrandes');
+const reporteRoutes       = require('./routes/reportes');
+const recepcionRoutes     = require('./routes/recepcion');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 const runMigrations = require('./db/migrations');
 
@@ -66,6 +68,8 @@ app.use('/api/pagos/flow', flowRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/pagos',    pagoRoutes);
 app.use('/api/reservas-grandes', reservaGrandeRoutes);
+app.use('/api/reportes', reporteRoutes);
+app.use('/api/recepcion', recepcionRoutes);
 
 app.get('*.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', req.path), (err) => {

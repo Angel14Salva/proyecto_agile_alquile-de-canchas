@@ -29,18 +29,29 @@
         </div>
       </div>
       <div id="alertPago" class="alert hidden"></div>
-      <div class="grid2">
-        <div class="card">
-          <div class="card-title">🔍 Buscar cliente</div>
-          <div class="form-group">
-            <label>Por nombre, DNI o email</label>
-            <div class="input-group">
-              <input type="text" id="buscarQ" placeholder="Nombre, DNI o email..." onkeydown="if(event.key==='Enter')buscar()">
-              <button class="btn-primary" onclick="buscar()">Buscar</button>
-            </div>
-          </div>
-          <div id="resultadoBusqueda"></div>
+      <div id="reservaGrandeDraft" class="card" style="display:none">
+        <div class="card-title">🏟️ Derivación desde HU-12</div>
+        <div id="reservaGrandeDraftContenido" style="font-size:13px;color:var(--gray-text)"></div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-secondary btn-sm" onclick="descartarReservaGrandeDraft()">Descartar borrador</button>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏢 Check-in y cobro</div>
+        <div class="form-group">
+          <label>Buscar por nombre, DNI, email, código o ID</label>
+          <div class="input-group">
+            <input type="text" id="checkinQ" placeholder="Ej: RES-2026-019, Juan Pérez..." onkeydown="if(event.key==='Enter')buscarCheckIn()">
+            <button class="btn-primary" onclick="buscarCheckIn()">Buscar</button>
+          </div>
+        </div>
+        <div id="checkinResultados"></div>
+        <div id="checkinDetalle" style="display:none;margin-top:16px;padding:16px;background:var(--gray-bg);border-radius:8px;border:1px solid var(--gray-border)">
+          <div id="checkinInfo"></div>
+          <div id="checkinAcciones" style="margin-top:12px"></div>
+        </div>
+      </div>
+      <div class="grid2">
         <div class="card">
           <div class="card-title">💵 Registrar pago en caja</div>
           <div class="form-group">
@@ -51,20 +62,40 @@
             </div>
             <div id="infoReserva" style="margin-top:8px;font-size:12px;color:var(--green);display:none"></div>
           </div>
+          <div id="pagoResumen" style="display:none;background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px"></div>
+          <div class="form-group">
+            <label>Monto recibido (S/)</label>
+            <input type="text" id="pagoMonto" placeholder="Total o 50% adelanto" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
+          </div>
           <div class="form-group">
             <label>Método de pago</label>
-            <select id="pagoMetodo">
+            <select id="pagoMetodo" onchange="toggleReferencia()">
               <option value="efectivo">💵 Efectivo</option>
               <option value="yape">💚 Yape</option>
               <option value="plin">💙 Plin</option>
               <option value="transferencia">🏦 Transferencia</option>
             </select>
           </div>
+          <div class="form-group" id="grupoReferencia" style="display:none">
+            <label>Número de operación <span style="color:var(--red)">*</span></label>
+            <input type="text" id="pagoReferencia" placeholder="Solo dígitos" oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
           <div class="form-group">
-            <label>Referencia (opcional)</label>
-            <input type="text" id="pagoReferencia" placeholder="Nro. de operación">
+            <label>Comprobante</label>
+            <select id="pagoComprobante">
+              <option value="boleta">Boleta</option>
+              <option value="factura">Factura</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notas (opcional)</label>
+            <input type="text" id="pagoNotas" placeholder="Observaciones del cobro">
           </div>
           <button class="btn-primary btn-full" onclick="registrarPago()">Registrar pago</button>
+        </div>
+        <div class="card">
+          <div class="card-title">ℹ️ Ayuda rápida</div>
+          <p style="font-size:13px;color:var(--gray-text)">Use <strong>Check-in</strong> para validar ingreso. El monto debe ser 50% (adelanto) o 100% (completo). Para saldo pendiente use check-in y cobre el monto exacto del saldo.</p>
         </div>
       </div>
       <div class="card">
@@ -133,48 +164,150 @@
   const hoy = new Date();
   document.getElementById('fechaHoy').textContent = hoy.toLocaleDateString('es-PE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('modFecha').min = hoy.toISOString().split('T')[0];
+  let reservaPago = null;
+  let reservaCheckIn = null;
 
-  async function buscar() {
-    const q = document.getElementById('buscarQ').value.trim();
+  function cargarDerivacionReservaGrande() {
+    const raw = sessionStorage.getItem('reservaGrandeDraft');
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      if (draft.destino !== 'presencial_hu06') return;
+      const div = document.getElementById('reservaGrandeDraft');
+      const contenido = document.getElementById('reservaGrandeDraftContenido');
+      contenido.innerHTML = `
+        <p style="margin-bottom:10px">
+          Se recibió una preparación de reserva grande desde HU-12. Aquí solo se continúa el flujo presencial; no se registró pago automático ni pasarela.
+        </p>
+        <strong>${draft.organizacion}</strong>${draft.ruc ? ` · RUC: ${draft.ruc}` : ''}<br>
+        Fecha: ${draft.fecha} · Turno: ${draft.turno.replace('_', ' ')} · ${draft.horas} horas por cancha<br>
+        Canchas: ${draft.canchas.map(c => c.nombre).join(', ')}<br>
+        Total calculado: <strong>S/ ${Number(draft.monto_total).toFixed(2)}</strong> · Adelanto 50%: <strong>S/ ${Number(draft.monto_adelanto).toFixed(2)}</strong><br>
+        ${draft.notas ? `Notas: ${draft.notas}<br>` : ''}
+        <span style="color:var(--gray-muted)">Este bloque funciona como insumo del siguiente paso manual de caja.</span>
+      `;
+      div.style.display = 'block';
+    } catch (err) {
+      console.error('No se pudo leer el borrador de reserva grande:', err);
+    }
+  }
+
+  function descartarReservaGrandeDraft() {
+    sessionStorage.removeItem('reservaGrandeDraft');
+    document.getElementById('reservaGrandeDraft').style.display = 'none';
+  }
+
+  function toggleReferencia() {
+    const m = document.getElementById('pagoMetodo').value;
+    document.getElementById('grupoReferencia').style.display = ['yape','plin','transferencia'].includes(m) ? 'block' : 'none';
+  }
+
+  async function buscarCheckIn() {
+    const q = document.getElementById('checkinQ').value.trim();
     if (!q) return;
-    const div = document.getElementById('resultadoBusqueda');
+    const div = document.getElementById('checkinResultados');
+    document.getElementById('checkinDetalle').style.display = 'none';
     div.innerHTML = '<div class="loading"><span class="spinner"></span>Buscando...</div>';
     try {
-      const results = await api.get(`/api/usuarios/buscar?q=${encodeURIComponent(q)}`);
-      if (results.length === 0) { div.innerHTML = '<p style="color:var(--gray-muted);font-size:13px;margin-top:8px">No se encontraron clientes</p>'; return; }
-      div.innerHTML = results.map(u => `
-        <div style="padding:10px;border:1px solid var(--gray-border);border-radius:7px;margin-top:8px">
-          <div style="font-weight:600;font-size:13px">${u.nombre}</div>
-          <div style="font-size:12px;color:var(--gray-text)">${u.email} · DNI: ${u.dni||'—'} · Tel: ${u.telefono||'—'}</div>
-          <span class="badge badge-gray" style="margin-top:4px">${u.rol}</span>
-        </div>`).join('');
-    } catch(err) { div.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">${err.message}</p>`; }
+      const results = await api.get(`/api/recepcion/check-in?q=${encodeURIComponent(q)}`);
+      if (results.length === 1) { mostrarCheckIn(results[0]); div.innerHTML = ''; return; }
+      div.innerHTML = results.map((r,i) => `
+        <button type="button" class="btn-secondary btn-full" style="text-align:left;margin-top:8px;padding:10px" onclick="mostrarCheckInDesdeLista(${i})">
+          <strong>${r.codigo}</strong> · ${r.cliente_nombre} · ${String(r.fecha).substring(0,10)} · ${r.pago_estado}
+        </button>`).join('');
+      window._checkinLista = results;
+    } catch(err) { div.innerHTML = `<p style="color:var(--red);font-size:13px">${err.message}</p>`; }
+  }
+
+  function mostrarCheckInDesdeLista(i) { mostrarCheckIn(window._checkinLista[i]); }
+
+  function mostrarCheckIn(r) {
+    reservaCheckIn = r;
+    document.getElementById('checkinDetalle').style.display = 'block';
+    document.getElementById('checkinInfo').innerHTML = `
+      <strong>${r.codigo}</strong> · ${r.cancha_nombre}<br>
+      Cliente: ${r.cliente_nombre} · ${String(r.fecha).substring(0,10)} ${String(r.hora_inicio).substring(0,5)}<br>
+      Total: S/ ${parseFloat(r.precio_hora).toFixed(2)} · Pagado: S/ ${parseFloat(r.pago_monto||0).toFixed(2)} ·
+      Estado pago: <strong>${r.pago_estado}</strong>${r.saldo_pendiente > 0 ? ` · Saldo: S/ ${r.saldo_pendiente.toFixed(2)}` : ''}`;
+
+    const acc = document.getElementById('checkinAcciones');
+    if (r.puede_confirmar_ingreso) {
+      acc.innerHTML = `<button class="btn-primary" onclick="confirmarIngreso(${r.id})">✅ Confirmar ingreso</button>`;
+    } else if (r.puede_cobrar) {
+      acc.innerHTML = `
+        <p style="font-size:12px;margin-bottom:8px">Cobrar saldo pendiente: <strong>S/ ${r.saldo_pendiente.toFixed(2)}</strong></p>
+        <button class="btn-primary" onclick="cobrarSaldo(${r.id}, ${r.saldo_pendiente})">💵 Cobrar saldo</button>`;
+    } else {
+      acc.innerHTML = `<span class="badge badge-amber">Sin acciones disponibles</span>`;
+    }
+  }
+
+  async function confirmarIngreso(id) {
+    try {
+      await api.post(`/api/recepcion/check-in/${id}/confirmar`, {});
+      document.getElementById('alertPago').textContent = '✅ Ingreso confirmado';
+      document.getElementById('alertPago').className = 'alert alert-success';
+      buscarCheckIn();
+    } catch(err) {
+      document.getElementById('alertPago').textContent = err.message;
+      document.getElementById('alertPago').className = 'alert alert-error';
+    }
+  }
+
+  function cobrarSaldo(id, monto) {
+    document.getElementById('pagoReservaId').value = id;
+    document.getElementById('pagoReservaId').dataset.reservaId = id;
+    document.getElementById('pagoMonto').value = monto.toFixed(2);
+    document.getElementById('pagoReservaId').dataset.esSaldo = 'true';
+    buscarReserva();
   }
 
   async function buscarReserva() {
     const val = document.getElementById('pagoReservaId').value.trim();
     if (!val) return;
     const info = document.getElementById('infoReserva');
+    const resumen = document.getElementById('pagoResumen');
     try {
       const reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
+      reservaPago = reserva;
       document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
+      document.getElementById('pagoReservaId').dataset.esSaldo = 'false';
+      const total = parseFloat(reserva.precio_hora||0);
+      const pagado = parseFloat(reserva.pago_monto||0);
+      const saldo = Math.max(0, total - pagado);
       info.style.display = 'block'; info.style.color = 'var(--green)';
-      info.textContent = '✅ '+reserva.cancha_nombre+' · '+reserva.fecha?.substring(0,10)+' · '+reserva.hora_inicio?.substring(0,5)+' · Cliente: '+reserva.cliente_nombre;
-    } catch(err) { info.style.display='block'; info.style.color='var(--red)'; info.textContent='❌ '+err.message; }
+      info.textContent = '✅ '+reserva.cancha_nombre+' · '+reserva.fecha?.substring(0,10)+' · Cliente: '+reserva.cliente_nombre;
+      resumen.style.display = 'block';
+      resumen.innerHTML = `<strong>Resumen:</strong> ${reserva.cancha_nombre}<br>Fecha: ${reserva.fecha?.substring(0,10)} · ${reserva.hora_inicio?.substring(0,5)} – ${reserva.hora_fin?.substring(0,5)}<br>Total: S/ ${total.toFixed(2)} · Pagado: S/ ${pagado.toFixed(2)} · Saldo: S/ ${saldo.toFixed(2)}`;
+      if (!document.getElementById('pagoMonto').value) {
+        document.getElementById('pagoMonto').value = saldo > 0 && pagado > 0 ? saldo.toFixed(2) : total.toFixed(2);
+      }
+    } catch(err) { info.style.display='block'; info.style.color='var(--red)'; info.textContent='❌ '+err.message; resumen.style.display='none'; }
   }
 
   async function registrarPago() {
     const metodo = document.getElementById('pagoMetodo').value;
     const ref    = document.getElementById('pagoReferencia').value;
+    const monto  = document.getElementById('pagoMonto').value;
     const alerta = document.getElementById('alertPago');
     const input  = document.getElementById('pagoReservaId');
     const reservaId = input.dataset.reservaId || input.value;
     if (!reservaId) { alerta.textContent='Busca primero la reserva'; alerta.className='alert alert-error'; return; }
     try {
-      await api.post('/api/pagos', { reserva_id: parseInt(reservaId), metodo, referencia: ref||null });
-      alerta.textContent='✅ Pago registrado y reserva confirmada'; alerta.className='alert alert-success';
-      document.getElementById('pagoReservaId').value=''; document.getElementById('pagoReferencia').value='';
-      cargarPendientes();
+      await api.post('/api/pagos', {
+        reserva_id: parseInt(reservaId, 10),
+        metodo,
+        monto: parseFloat(monto),
+        referencia: ref || null,
+        tipo_comprobante: document.getElementById('pagoComprobante').value,
+        notas: document.getElementById('pagoNotas').value || null,
+        es_saldo: input.dataset.esSaldo === 'true'
+      });
+      alerta.textContent='✅ Pago registrado correctamente'; alerta.className='alert alert-success';
+      input.value=''; input.dataset.reservaId=''; input.dataset.esSaldo='false';
+      document.getElementById('pagoReferencia').value=''; document.getElementById('pagoMonto').value='';
+      document.getElementById('pagoResumen').style.display='none';
+      reservaPago=null; cargarPendientes();
     } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
   }
 
@@ -267,6 +400,7 @@
   }
 
   cargarPendientes();
+  cargarDerivacionReservaGrande();
 </script>
 </body>
 </html>

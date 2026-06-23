@@ -88,11 +88,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>Nombre completo <span style="color:var(--red)">*</span></label>
-              <input type="text" id="clienteNombre" placeholder="Ej: Juan Pérez García" oninput="validarDatosCliente()">
+              <input type="text" id="clienteNombre" placeholder="Ej: Juan Pérez García" maxlength="100" oninput="this.value=this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]/g,'');validarDatosCliente()">
             </div>
             <div class="form-group">
               <label>DNI <span style="color:var(--red)">*</span></label>
-              <input type="text" id="clienteDni" placeholder="8 dígitos numéricos" maxlength="8" oninput="validarDatosCliente()">
+              <input type="text" id="clienteDni" placeholder="8 dígitos numéricos" maxlength="8" oninput="this.value=this.value.replace(/\D/g,'');validarDatosCliente()">
               <div id="dniError" style="font-size:11px;color:var(--red);margin-top:4px;display:none">El DNI debe tener exactamente 8 dígitos numéricos</div>
             </div>
           </div>

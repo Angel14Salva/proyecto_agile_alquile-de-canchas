@@ -11,6 +11,15 @@ class ReservaGrandeController {
     if (!nombre_org || !fecha || !turno || !cancha_ids || cancha_ids.length < 3)
       return res.status(400).json({ error: 'Se requiere organización, fecha, turno y mínimo 3 canchas' });
 
+    if (ruc && !/^\d{11}$/.test(ruc))
+      return res.status(400).json({ error: 'El RUC debe tener 11 dígitos numéricos' });
+
+    const turnosValidos = ['manana', 'tarde', 'dia_completo'];
+    if (!turnosValidos.includes(turno))
+      return res.status(400).json({ error: 'Turno invalido' });
+
+    const origenFinal = (req.user.rol === 'recepcionista' || req.user.rol === 'admin') ? 'recepcion' : 'linea';
+
     // Validar 7 días de anticipación
     const fechaEvento = new Date(fecha + 'T00:00:00');
     const ahora = new Date();
@@ -67,7 +76,7 @@ class ReservaGrandeController {
       const [result] = await db.query(
         `INSERT INTO reservas_grandes (codigo, usuario_id, nombre_org, ruc, fecha, turno, hora_inicio, hora_fin, num_canchas, precio_total, estado, origen, notas)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, ?)`,
-        [codigo, usuario_id, nombre_org, ruc || null, fecha, turno, inicio, fin, cancha_ids.length, precioTotal, origen || 'linea', notas || null]
+        [codigo, usuario_id, nombre_org, ruc || null, fecha, turno, inicio, fin, cancha_ids.length, precioTotal, origenFinal, notas || null]
       );
 
       // Insertar canchas seleccionadas

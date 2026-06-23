@@ -49,10 +49,13 @@ CREATE TABLE reservas (
   notas         TEXT,
   cliente_nombre VARCHAR(100) NULL,
   cliente_dni    CHAR(8)      NULL,
+  cancelado_por  INT           NULL,
+  cancelado_at   DATETIME      NULL,
   created_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (cancha_id)  REFERENCES canchas(id)  ON DELETE RESTRICT,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+  FOREIGN KEY (cancelado_por) REFERENCES usuarios(id) ON DELETE SET NULL,
   UNIQUE KEY uq_cancha_slot (cancha_id, fecha, hora_inicio)
 );
 
@@ -60,14 +63,41 @@ CREATE TABLE pagos (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   reserva_id     INT           NOT NULL UNIQUE,
   monto          DECIMAL(8,2)  NOT NULL,
-  metodo         ENUM('efectivo', 'transferencia', 'yape', 'plin', 'tarjeta') NOT NULL,
+  metodo         ENUM('efectivo', 'transferencia', 'yape', 'plin', 'tarjeta', 'flow') NOT NULL,
   estado         ENUM('pendiente', 'pagado', 'reembolsado') NOT NULL DEFAULT 'pendiente',
+  tipo_pago      ENUM('completo', 'adelanto') NULL,
   referencia     VARCHAR(100),
+  reembolso_metodo ENUM('efectivo', 'transferencia') NULL,
+  reembolso_confirmado_at DATETIME NULL,
   registrado_por INT,
   created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (reserva_id)     REFERENCES reservas(id)  ON DELETE RESTRICT,
   FOREIGN KEY (registrado_por) REFERENCES usuarios(id)  ON DELETE SET NULL
+);
+
+CREATE TABLE comprobantes (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  pago_id     INT           NOT NULL UNIQUE,
+  reserva_id  INT           NOT NULL,
+  tipo        ENUM('boleta','factura') NOT NULL DEFAULT 'boleta',
+  numero      VARCHAR(30)   NOT NULL UNIQUE,
+  created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (pago_id)    REFERENCES pagos(id)    ON DELETE RESTRICT,
+  FOREIGN KEY (reserva_id) REFERENCES reservas(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE notas_credito (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  comprobante_id  INT           NOT NULL,
+  reserva_id      INT           NOT NULL,
+  numero          VARCHAR(30)   NOT NULL UNIQUE,
+  monto           DECIMAL(8,2)  NOT NULL,
+  cancelado_por   INT           NOT NULL,
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (comprobante_id) REFERENCES comprobantes(id) ON DELETE RESTRICT,
+  FOREIGN KEY (reserva_id)     REFERENCES reservas(id)     ON DELETE RESTRICT,
+  FOREIGN KEY (cancelado_por)  REFERENCES usuarios(id)     ON DELETE RESTRICT
 );
 
 CREATE TABLE audit_log (
