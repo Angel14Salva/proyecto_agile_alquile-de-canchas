@@ -128,7 +128,20 @@
   }
 
   function editarCancha(id) {
-    window.location.href = `admin.html?editar=${id}`;
+    const c = canchas.find(x => x.id === id);
+    if (!c) return;
+    const nombre = prompt('Nombre:', c.nombre);
+    if (nombre === null) return;
+    const precio = prompt('Precio por hora (S/):', c.precio_hora);
+    if (precio === null) return;
+    const apertura = prompt('Hora apertura (HH:MM):', c.hora_apertura?.substring(0,5));
+    if (apertura === null) return;
+    const cierre = prompt('Hora cierre (HH:MM):', c.hora_cierre?.substring(0,5));
+    if (cierre === null) return;
+    api.put('/api/canchas/' + id, {
+      nombre, precio_hora: parseFloat(precio),
+      hora_apertura: apertura + ':00', hora_cierre: cierre + ':00'
+    }).then(() => cargarCanchas()).catch(err => alert(err.message));
   }
 
   cargar();
