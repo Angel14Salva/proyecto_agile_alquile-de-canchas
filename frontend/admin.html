@@ -112,7 +112,7 @@
   requireRole('admin');
   renderSidebar('admin');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
-  document.getElementById('fechaReporte').textContent = new Date().toLocaleDateString('es-PE');
+  const _fr = document.getElementById('fechaReporte'); if(_fr) _fr.textContent = new Date().toLocaleDateString('es-PE');
 
   // Abrir tab según hash en URL (ej: admin.html#usuarios)
   const hash = window.location.hash.replace('#','');
