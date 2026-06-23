@@ -44,7 +44,7 @@ class FlowController {
 
       res.json({ url: urlPago, token: response.token });
     } catch (err) {
-      console.error('Error en Flow crear:', err);
+      console.error('Error en Flow crear:', err?.message || err);
       res.status(500).json({ error: 'Error al crear orden de pago' });
     }
   }
