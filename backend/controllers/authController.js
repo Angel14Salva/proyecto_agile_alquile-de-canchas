@@ -168,6 +168,8 @@ class AuthController {
   async forgotPassword(req, res) {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email requerido' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return res.status(400).json({ error: 'Formato de email inválido' });
     try {
       const [rows] = await db.query('SELECT id, nombre FROM usuarios WHERE email = ?', [email]);
       // Respuesta siempre igual para no revelar si el correo existe

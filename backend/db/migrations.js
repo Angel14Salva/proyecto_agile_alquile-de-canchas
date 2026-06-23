@@ -9,6 +9,10 @@ async function runMigrations() {
        ADD COLUMN IF NOT EXISTS login_intentos  INT      NOT NULL DEFAULT 0,
        ADD COLUMN IF NOT EXISTS bloqueado_hasta DATETIME`,
 
+    `ALTER TABLE usuarios
+       ADD COLUMN IF NOT EXISTS reset_token        VARCHAR(255),
+       ADD COLUMN IF NOT EXISTS reset_token_expiry DATETIME`,
+
     `CREATE TABLE IF NOT EXISTS audit_log (
        id          INT AUTO_INCREMENT PRIMARY KEY,
        usuario_id  INT,
