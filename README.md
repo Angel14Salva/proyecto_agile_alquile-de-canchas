@@ -58,6 +58,7 @@ Proyecto universitario real con usuarios reales — desarrollado con metodologí
 │   ├── mis-reservas.html           → Historial del cliente
 │   ├── reservas.html               → Gestión de reservas (admin/recepcionista)
 │   ├── recepcion.html              → Panel de recepción y cobro en caja
+│   ├── cancelar-reserva.html       → Cancelar reserva desde recepción (HU-10)
 │   └── admin.html                  → Administración, usuarios y reportes
 ├── database/
 │   └── init.sql                    → Schema completo + datos iniciales
@@ -128,6 +129,27 @@ http://localhost:3000
 
 ---
 
+## ⏳ Pendiente de configuración
+
+Variables necesarias para activar integraciones que aún no están conectadas en producción:
+
+| Variable | Dónde colocarla | Para qué sirve |
+|---|---|---|
+| `FLOW_API_KEY` | `backend/.env` | API Key de la pasarela Flow (pagos en línea) |
+| `FLOW_SECRET_KEY` | `backend/.env` | Secret Key de Flow para firmar requests |
+| `FLOW_API_URL` | `backend/.env` | URL base de la API Flow (ej. `https://www.flow.cl/api`) |
+| `FLOW_URL_CONFIRMACION` | `backend/.env` | Webhook de confirmación de pago (`POST /api/pagos/flow/confirmar`) |
+| `FLOW_URL_RETORNO` | `backend/.env` | URL de retorno del cliente tras pagar en Flow |
+| `BREVO_API_KEY` | `backend/.env` | Envío de correos (confirmación, cancelación) vía Brevo |
+
+**Reembolso automático vía pasarela (HU-11):** el adapter `backend/services/reembolsoPasarelaAdapter.js` queda preparado con el método `solicitarReembolso()`. Sin credenciales Flow activas, las cancelaciones en línea con pago vía pasarela quedan en estado `pendiente_reembolso` para revisión en recepción. HU-10 registra reembolsos **manuales** (efectivo/transferencia).
+
+**Correo transaccional:** requiere `BREVO_API_KEY`. Sin ella, reservas/pagos/cancelaciones funcionan pero no se envían emails.
+
+**Recuperación de contraseña:** fuera de alcance — no implementar ni activar sin credenciales de correo.
+
+---
+
 ## 🗄️ Base de datos
 
 **4 tablas principales:**
@@ -158,7 +180,14 @@ http://localhost:3000
 | GET | `/api/canchas` | Listar canchas | No |
 | GET | `/api/canchas/:id/disponibilidad?fecha=` | Ver slots disponibles | No |
 | POST | `/api/reservas` | Crear reserva | Sí |
-| DELETE | `/api/reservas/:id` | Cancelar reserva | Sí |
+| DELETE | `/api/reservas/:id` | Cancelar reserva (cliente) | Sí |
+| GET | `/api/reservas/buscar-cancelacion?q=` | Buscar reserva para cancelar (recepción) | Admin/Recep |
+| GET | `/api/recepcion/check-in?q=` | Check-in: buscar reserva y estado de pago | Admin/Recep |
+| POST | `/api/recepcion/check-in/:id/confirmar` | Confirmar ingreso (pago completo) | Admin/Recep |
+| GET | `/api/reportes/dashboard?desde=&hasta=` | Métricas gerente | Admin |
+| GET | `/api/reportes/export/pdf?desde=&hasta=` | Exportar PDF | Admin |
+| GET | `/api/reportes/export/excel?desde=&hasta=` | Exportar Excel | Admin |
+| POST | `/api/reservas/:id/cancelar-linea` | Cancelar reserva cliente (reembolso pasarela) | Cliente |
 | POST | `/api/pagos` | Registrar pago | Sí |
 | GET | `/api/usuarios/buscar?q=` | Buscar por nombre/DNI | Admin/Recep |
 | GET | `/health` | Health check | No |

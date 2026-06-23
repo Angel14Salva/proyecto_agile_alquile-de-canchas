@@ -4,28 +4,30 @@ function renderSidebar(activePage) {
   const rol = usuario?.rol;
 
   const items = [
-    // ── Todos ──────────────────────────────────────────────────────────
-    { page: 'dashboard',      href: 'dashboard.html',      icon: '🏠', label: 'Dashboard',          roles: ['admin','recepcionista','cliente'] },
+    { page: 'dashboard',        href: 'dashboard.html',        icon: '🏠', label: 'Dashboard',          roles: ['admin','recepcionista','cliente'] },
 
-    // ── Cliente ────────────────────────────────────────────────────────
-    { page: 'canchas',        href: 'canchas.html',         icon: '⚽', label: 'Canchas',             roles: ['cliente'] },
-    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Reservar',            roles: ['cliente'] },
-    { page: 'mis-reservas',   href: 'mis-reservas.html',    icon: '📋', label: 'Mis reservas',        roles: ['cliente'] },
-    { page: 'reserva-grande', href: 'reserva-grande.html',  icon: '🏟️', label: 'Reserva grande',     roles: ['cliente'] },
+    // Cliente
+    { page: 'canchas',          href: 'canchas.html',           icon: '⚽', label: 'Canchas',             roles: ['cliente'] },
+    { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Reservar',            roles: ['cliente'] },
+    { page: 'mis-reservas',     href: 'mis-reservas.html',      icon: '📋', label: 'Mis reservas',        roles: ['cliente'] },
+    { page: 'reserva-grande',   href: 'reserva-grande.html',    icon: '🏟️', label: 'Reserva grande',     roles: ['cliente'] },
 
-    // ── Recepcionista ──────────────────────────────────────────────────
-    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Nueva reserva',       roles: ['recepcionista'] },
-    { page: 'reserva-grande', href: 'reserva-grande.html',  icon: '🏟️', label: 'Reserva grande',     roles: ['recepcionista'] },
-    { page: 'reservas',       href: 'reservas.html',        icon: '📋', label: 'Todas las reservas',  roles: ['recepcionista'] },
-    { page: 'recepcion',      href: 'recepcion.html',       icon: '🏢', label: 'Recepción',           roles: ['recepcionista'] },
+    // Recepcionista
+    { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Nueva reserva',       roles: ['recepcionista'] },
+    { page: 'reserva-grande',   href: 'reserva-grande.html',    icon: '🏟️', label: 'Reserva grande',     roles: ['recepcionista'] },
+    { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',  roles: ['recepcionista'] },
+    { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',           roles: ['recepcionista'] },
+    { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',    roles: ['recepcionista'] },
 
-    // ── Gerente (admin) ────────────────────────────────────────────────
-    { page: 'canchas',        href: 'canchas.html',         icon: '⚽', label: 'Canchas',             roles: ['admin'] },
-    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Nueva reserva',       roles: ['admin'] },
-    { page: 'reservas',       href: 'reservas.html',        icon: '📋', label: 'Todas las reservas',  roles: ['admin'] },
-    { page: 'recepcion',      href: 'recepcion.html',       icon: '🏢', label: 'Recepción',           roles: ['admin'] },
-    { page: 'admin',          href: 'admin.html',           icon: '📊', label: 'Panel de informes',   roles: ['admin'] },
-    { page: 'usuarios',       href: 'admin.html#usuarios',  icon: '👥', label: 'Gestión de usuarios', roles: ['admin'] },
+    // Gerente
+    { page: 'canchas',          href: 'canchas.html',           icon: '⚽', label: 'Canchas',             roles: ['admin'] },
+    { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Nueva reserva',       roles: ['admin'] },
+    { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',  roles: ['admin'] },
+    { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',           roles: ['admin'] },
+    { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',    roles: ['admin'] },
+    { page: 'admin',            href: 'admin.html',             icon: '📊', label: 'Panel de informes',   roles: ['admin'] },
+    { page: 'admin-export',     href: 'admin.html#informes',    icon: '📤', label: 'Exportar informes',   roles: ['admin'] },
+    { page: 'admin-usuarios',   href: 'admin.html#usuarios',    icon: '👥', label: 'Gestión de usuarios', roles: ['admin'] },
   ];
 
   const visibles = items.filter(i => i.roles.includes(rol));

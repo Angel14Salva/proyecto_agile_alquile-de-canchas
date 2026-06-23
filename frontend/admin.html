@@ -79,22 +79,19 @@
       <div id="tabInformes" style="display:none">
         <div class="card">
           <div class="card-title">📊 Exportar reportes</div>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px">
-            <div style="padding:14px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-size:13px;font-weight:600">Reservas del día</div>
-                <div style="font-size:12px;color:var(--gray-muted)" id="fechaReporte"></div>
-              </div>
-              <button class="btn-secondary btn-sm" onclick="exportarReservasCSV()">📄 CSV</button>
-            </div>
-            <div style="padding:14px;border:1px solid var(--gray-border);border-radius:8px;display:flex;justify-content:space-between;align-items:center">
-              <div>
-                <div style="font-size:13px;font-weight:600">Lista de canchas</div>
-                <div style="font-size:12px;color:var(--gray-muted)">Con precios y horarios</div>
-              </div>
-              <button class="btn-secondary btn-sm" onclick="exportarCanchasCSV()">📄 CSV</button>
-            </div>
+          <div class="form-row" style="margin-top:12px">
+            <div class="form-group"><label>Desde</label><input type="date" id="expDesde"></div>
+            <div class="form-group"><label>Hasta</label><input type="date" id="expHasta"></div>
           </div>
+          <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn-primary btn-sm" onclick="exportar('pdf')">📄 Exportar PDF</button>
+            <button class="btn-secondary btn-sm" onclick="exportar('excel')">📊 Exportar Excel</button>
+          </div>
+          <div class="form-row" style="margin-top:16px">
+            <div class="form-group"><label>Caja inicial del mes (S/)</label><input type="text" id="cajaInicial" oninput="this.value=this.value.replace(/[^\d.]/g,'')"></div>
+            <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn-secondary" onclick="guardarCajaInicial()">Guardar caja inicial</button></div>
+          </div>
+          <div id="historialExport" style="margin-top:16px"><div class="loading"><span class="spinner"></span>Cargando historial...</div></div>
         </div>
       </div>
 
@@ -129,7 +126,65 @@
       document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}Btn`).classList.toggle('active', t === tab);
     });
     if (tab === 'canchas'  && !canchasData.length) cargarCanchas();
-    if (tab === 'informes' && !canchasData.length) cargarCanchas();
+    if (tab === 'informes') { cargarHistorialExport(); setDefaultFechasExport(); }
+  }
+
+  function setDefaultFechasExport() {
+    const hoy = new Date();
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    document.getElementById('expDesde').value = inicio.toISOString().split('T')[0];
+    document.getElementById('expHasta').value = hoy.toISOString().split('T')[0];
+  }
+
+  async function exportar(fmt) {
+    const desde = document.getElementById('expDesde').value;
+    const hasta = document.getElementById('expHasta').value;
+    if (!desde || !hasta) { alert('Seleccione rango de fechas'); return; }
+    try {
+      await api.download(`/api/reportes/export/${fmt}?desde=${desde}&hasta=${hasta}`);
+      cargarHistorialExport();
+    } catch(err) {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    }
+  }
+
+  async function guardarCajaInicial() {
+    const hoy = new Date();
+    try {
+      await api.post('/api/reportes/caja-inicial', {
+        anio: hoy.getFullYear(), mes: hoy.getMonth() + 1,
+        monto: parseFloat(document.getElementById('cajaInicial').value || 0)
+      });
+      document.getElementById('alert').textContent = '✅ Caja inicial registrada';
+      document.getElementById('alert').className = 'alert alert-success';
+    } catch(err) {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    }
+  }
+
+  async function cargarHistorialExport() {
+    try {
+      const rows = await api.get('/api/reportes/historial');
+      document.getElementById('historialExport').innerHTML = rows.length ? `
+        <div class="card-title" style="font-size:13px">Últimos informes</div>
+        <table><thead><tr><th>Archivo</th><th>Formato</th><th>Rango</th><th>Fecha</th></tr></thead>
+        <tbody>${rows.map(r => `<tr><td>${r.nombre}</td><td>${r.formato}</td><td>${r.desde} – ${r.hasta}</td><td>${new Date(r.created_at).toLocaleString('es-PE')}</td></tr>`).join('')}
+        </tbody></table>` : '<p style="color:var(--gray-muted);font-size:13px">Sin exportaciones previas</p>';
+    } catch(err) {
+      document.getElementById('historialExport').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
+    }
+  }
+
+  async function toggleUsuario(id, activo) {
+    try {
+      await api.put(`/api/usuarios/${id}`, { activo: !activo });
+      cargarUsuarios();
+    } catch(err) {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    }
   }
 
   function toggleFormUsuario() {
@@ -165,13 +220,14 @@
       const badgeRol = { admin:'badge-blue', recepcionista:'badge-amber', cliente:'badge-gray' };
       document.getElementById('listaUsuarios').innerHTML =
         `<table>
-          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
           <tbody>
             ${usuarios.map(u => `<tr>
               <td><strong>${u.nombre}</strong></td>
               <td style="font-size:12px;color:var(--gray-text)">${u.email}</td>
               <td><span class="badge ${badgeRol[u.rol]||'badge-gray'}">${rolLabel[u.rol]||u.rol}</span></td>
               <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
+              <td><button class="btn-sm ${u.activo?'btn-danger':'btn-primary'}" onclick="toggleUsuario(${u.id}, ${u.activo})">${u.activo?'Desactivar':'Activar'}</button></td>
             </tr>`).join('')}
           </tbody>
          </table>`;
@@ -182,7 +238,7 @@
 
   async function cargarCanchas() {
     try {
-      canchasData = await api.get('/api/canchas', false);
+      canchasData = await api.get('/api/canchas/admin/list');
       const iconos = { futbol:'⚽', basketball:'🏀', volleyball:'🏐' };
       document.getElementById('listaCanchas').innerHTML =
         `<table>
@@ -194,10 +250,8 @@
               <td style="font-size:12px">${c.hora_apertura?.substring(0,5)} – ${c.hora_cierre?.substring(0,5)}</td>
               <td><span class="badge ${c.activo?'badge-green':'badge-red'}">${c.activo?'Activa':'Inactiva'}</span></td>
               <td>
-                <button class="btn-sm ${c.activo?'btn-danger':'btn-primary'}"
-                  onclick="toggleCancha(${c.id},${c.activo})">
-                  ${c.activo?'Deshabilitar':'Habilitar'}
-                </button>
+                <button class="btn-secondary btn-sm" onclick="editarCanchaInline(${c.id})">Editar</button>
+                <button class="btn-sm ${c.activo?'btn-danger':'btn-primary'}" onclick="toggleCancha(${c.id},${c.activo})">${c.activo?'Deshabilitar':'Habilitar'}</button>
               </td>
             </tr>`).join('')}
           </tbody>
@@ -216,6 +270,26 @@
       document.getElementById('alert').textContent = err.message;
       document.getElementById('alert').className = 'alert alert-error';
     }
+  }
+
+  function editarCanchaInline(id) {
+    const c = canchasData.find(x => x.id === id);
+    if (!c) return;
+    const nombre = prompt('Nombre:', c.nombre);
+    if (nombre === null) return;
+    const precio = prompt('Precio por hora (S/):', c.precio_hora);
+    if (precio === null) return;
+    const apertura = prompt('Hora apertura (HH:MM):', c.hora_apertura?.substring(0,5));
+    if (apertura === null) return;
+    const cierre = prompt('Hora cierre (HH:MM):', c.hora_cierre?.substring(0,5));
+    if (cierre === null) return;
+    api.put(`/api/canchas/${id}`, {
+      nombre, precio_hora: parseFloat(precio),
+      hora_apertura: apertura + ':00', hora_cierre: cierre + ':00'
+    }).then(() => cargarCanchas()).catch(err => {
+      document.getElementById('alert').textContent = err.message;
+      document.getElementById('alert').className = 'alert alert-error';
+    });
   }
 
   async function exportarReservasCSV() {

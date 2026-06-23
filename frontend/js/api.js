@@ -54,4 +54,23 @@ const api = {
   post:   (path, body, auth = true)  => api.request('POST',   path, body, auth),
   put:    (path, body, auth = true)  => api.request('PUT',    path, body, auth),
   delete: (path, auth = true)        => api.request('DELETE', path, null, auth),
+
+  download: async (path) => {
+    const res = await fetch(`${API_URL}${path}`, {
+      headers: { Authorization: `Bearer ${api.getToken()}` }
+    });
+    if (res.status === 401) { api.logout(); return; }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Error en la descarga');
+    }
+    const blob = await res.blob();
+    const disp = res.headers.get('Content-Disposition') || '';
+    const match = disp.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : 'informe';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  },
 };

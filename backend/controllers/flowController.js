@@ -71,7 +71,7 @@ class FlowController {
 
         if (pagoExiste.length === 0) {
           await db.query(
-            'INSERT INTO pagos (reserva_id, monto, metodo, estado, referencia) VALUES (?, ?, "flow", "pagado", ?)',
+            'INSERT INTO pagos (reserva_id, monto, metodo, estado, tipo_pago, referencia) VALUES (?, ?, "flow", "pagado", "completo", ?)',
             [reserva_id, cancha[0]?.precio_hora || 0, token]
           );
         }

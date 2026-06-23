@@ -52,4 +52,24 @@ async function enviarRecuperacionPassword(email, datos) {
   );
 }
 
-module.exports = { enviarConfirmacionReserva, enviarCancelacionReserva, enviarRecuperacionPassword };
+async function enviarConfirmacionPago(email, datos) {
+  const { nombre, codigo, monto, tipo_pago, comprobante } = datos;
+  const tipoLabel = tipo_pago === 'adelanto' ? 'Adelanto (50%)' : 'Pago completo';
+  await enviarEmail(email, 'Pago confirmado - ' + codigo,
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><div style="background:#2d6a4f;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0">Pacific Sport Center</h1><p style="color:#b7e4c7;margin:6px 0 0">Confirmacion de pago</p></div><div style="background:#f8f9fa;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e0e0e0"><p>Hola <strong>' + nombre + '</strong>,</p><p>Se registro tu pago:</p><table style="width:100%;border-collapse:collapse"><tr><td style="padding:8px 0;color:#666">Reserva</td><td style="font-weight:700">' + codigo + '</td></tr><tr><td style="padding:8px 0;color:#666">Tipo</td><td>' + tipoLabel + '</td></tr><tr><td style="padding:8px 0;color:#666">Monto</td><td style="font-weight:700;color:#2d6a4f">S/ ' + monto + '</td></tr><tr><td style="padding:8px 0;color:#666">Comprobante</td><td>' + comprobante + '</td></tr></table><p style="font-size:12px;color:#999;margin-top:16px">Pacific Sport Center - Trujillo, Peru</p></div></div>'
+  );
+}
+
+async function enviarCancelacionLinea(email, datos) {
+  const { nombre, codigo, monto, exito, mensaje } = datos;
+  const titulo = exito ? 'Cancelacion confirmada' : 'Cancelacion en revision';
+  const color = exito ? '#2d6a4f' : '#d97706';
+  await enviarEmail(email, titulo + ' - ' + codigo,
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><div style="background:' + color + ';padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0">Pacific Sport Center</h1></div><div style="background:#f8f9fa;padding:24px;border:1px solid #e0e0e0;border-radius:0 0 12px 12px"><p>Hola <strong>' + nombre + '</strong>,</p><p>' + mensaje + '</p><p><strong>Reserva:</strong> ' + codigo + '<br><strong>Reembolso:</strong> S/ ' + monto + '</p></div></div>'
+  );
+}
+
+module.exports = {
+  enviarConfirmacionReserva, enviarCancelacionReserva, enviarRecuperacionPassword,
+  enviarConfirmacionPago, enviarCancelacionLinea
+};

@@ -33,11 +33,11 @@
       <div id="successMsg" class="hidden">
         <div class="card" style="background:var(--green-light);border-color:var(--green-border);text-align:center;padding:32px">
           <div style="font-size:48px;margin-bottom:12px">✅</div>
-          <div style="font-size:18px;font-weight:600;color:var(--green)">¡Reserva grande creada!</div>
+          <div style="font-size:18px;font-weight:600;color:var(--green)" id="resultadoTitulo">Paso siguiente preparado</div>
           <div style="font-size:13px;color:var(--green);margin-top:6px" id="codigoReserva"></div>
-          <div style="font-size:13px;color:var(--green);margin-top:4px">⚠️ Recuerda que si no pagas 72 horas antes del evento, la reserva se cancelará automáticamente.</div>
+          <div style="font-size:13px;color:var(--green);margin-top:4px" id="resultadoDetalle"></div>
           <div style="margin-top:16px;display:flex;justify-content:center;gap:10px">
-            <a href="mis-reservas-grandes.html" class="btn-primary">Ver mis reservas</a>
+            <a href="reserva-grande.html" class="btn-primary">Nueva simulación</a>
             <a href="dashboard.html" class="btn-secondary">Ir al dashboard</a>
           </div>
         </div>
@@ -77,7 +77,7 @@
               </select>
             </div>
             <div style="background:#f8f9fa;border-radius:8px;padding:12px;font-size:13px;color:var(--gray-text)">
-              ⚠️ Se requiere mínimo <strong>7 días de anticipación</strong> y pago antes de <strong>72 horas</strong> del evento.
+              Completa todos los datos para habilitar el siguiente paso de pago según tu rol.
             </div>
           </div>
         </div>
@@ -88,17 +88,9 @@
         </div>
 
         <div class="card" id="cardResumen" style="display:none">
-          <div class="card-title">4. Resumen y confirmación</div>
+          <div class="card-title">4. Resumen y siguiente paso</div>
           <div id="resumenDetalle" style="font-size:13px;margin-bottom:16px"></div>
-          <div class="form-group">
-            <label>Método de pago</label>
-            <select id="metodo">
-              <option value="efectivo">💵 Efectivo en caja</option>
-              <option value="transferencia">🏦 Transferencia bancaria</option>
-              <option value="yape">💚 Yape</option>
-            </select>
-          </div>
-          <button class="btn-primary" onclick="confirmar()" id="btnConfirmar">Confirmar reserva grande →</button>
+          <div id="accionesPago"></div>
         </div>
       </div>
     </main>
@@ -110,13 +102,16 @@
 <script>
   requireAuth();
   renderSidebar('reserva-grande');
-  document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
+  const usuario = api.getUsuario();
+  const esRecepcion = ['recepcionista', 'admin'].includes(usuario?.rol);
+  document.getElementById('topbarUser').textContent = `👤 ${usuario.nombre}`;
 
   // Fecha mínima = hoy + 7 días
   const minFecha = new Date();
   minFecha.setDate(minFecha.getDate() + 7);
   document.getElementById('fecha').min = minFecha.toISOString().split('T')[0];
   document.getElementById('fecha').addEventListener('change', () => { verificarDisponibilidad(); actualizarResumen(); });
+  document.getElementById('nombre_org').addEventListener('input', actualizarResumen);
 
   let canchas = [];
   let canchasSeleccionadas = [];
@@ -158,23 +153,19 @@
   }
 
   function actualizarResumen() {
+    const nombreOrg = document.getElementById('nombre_org').value.trim();
     const fecha  = document.getElementById('fecha').value;
     const turno  = document.getElementById('turno').value;
     const resumen = document.getElementById('cardResumen');
     const detalle = document.getElementById('resumenDetalle');
 
-    if (canchasSeleccionadas.length < 3 || !fecha || !turno) {
+    if (!nombreOrg || canchasSeleccionadas.length < 3 || !fecha || !turno) {
       resumen.style.display = 'none';
       return;
     }
 
-    const horas = { manana: 6, tarde: 10, dia_completo: 16 };
-    const horarios = { manana: '07:00 – 13:00', tarde: '13:00 – 23:00', dia_completo: '07:00 – 23:00' };
-    const descuentos = { manana: 0, tarde: 0.10, dia_completo: 0.20 };
-    const h = horas[turno];
-    const desc = descuentos[turno];
-    const precioBase = canchasSeleccionadas.reduce((sum, c) => sum + parseFloat(c.precio) * h, 0);
-    const total = precioBase * (1 - desc);
+    const calculo = obtenerCalculoActual();
+    const { h, desc, precioBase, total, adelanto, horarios } = calculo;
 
     detalle.innerHTML = `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -185,40 +176,112 @@
         ${desc > 0 ? `<tr><td style="padding:6px 0;color:#666">Precio base</td><td>S/ ${precioBase.toFixed(2)}</td></tr>
         <tr><td style="padding:6px 0;color:var(--green)">Descuento (${desc*100}%)</td><td style="color:var(--green)">- S/ ${(precioBase*desc).toFixed(2)}</td></tr>` : ''}
         <tr><td style="padding:6px 0;color:#666;font-size:15px">Total</td><td><strong style="color:var(--green);font-size:18px">S/ ${total.toFixed(2)}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#666">Adelanto 50%</td><td><strong>S/ ${adelanto.toFixed(2)}</strong></td></tr>
       </table>`;
 
+    renderAccionesPago(calculo);
     resumen.style.display = 'block';
   }
 
-  async function confirmar() {
+  function obtenerCalculoActual() {
+    const turno = document.getElementById('turno').value;
+    const horas = { manana: 6, tarde: 10, dia_completo: 16 };
+    const horarios = { manana: '07:00 – 13:00', tarde: '13:00 – 23:00', dia_completo: '07:00 – 23:00' };
+    const descuentos = { manana: 0, tarde: 0.10, dia_completo: 0.20 };
+    const h = horas[turno];
+    const desc = descuentos[turno];
+    const precioBase = canchasSeleccionadas.reduce((sum, c) => sum + parseFloat(c.precio) * h, 0);
+    const total = Math.round((precioBase * (1 - desc)) * 100) / 100;
+    const adelanto = Math.round((total * 0.5) * 100) / 100;
+    return { h, desc, precioBase, total, adelanto, horarios };
+  }
+
+  function renderAccionesPago(calculo) {
+    const div = document.getElementById('accionesPago');
+    if (esRecepcion) {
+      div.innerHTML = `
+        <div style="background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--gray-text)">
+          La reserva grande queda lista para continuar con el cobro presencial en caja. Aquí no se procesa el pago.
+        </div>
+        <button class="btn-primary" onclick="continuarPagoPresencial()">Continuar con pago presencial</button>`;
+      return;
+    }
+
+    div.innerHTML = `
+      <div style="background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;color:var(--gray-text)">
+        Elige cómo deseas continuar. Este paso no integra pasarela real; solo deja preparado el siguiente flujo.
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="prepararPagoOnline('adelanto')">Pagar adelanto 50% · S/ ${calculo.adelanto.toFixed(2)}</button>
+        <button class="btn-secondary" onclick="prepararPagoOnline('completo')">Pagar completo · S/ ${calculo.total.toFixed(2)}</button>
+      </div>`;
+  }
+
+  function validarFormularioCompleto() {
     const nombre_org = document.getElementById('nombre_org').value.trim();
     const ruc        = document.getElementById('ruc').value.trim();
     const fecha      = document.getElementById('fecha').value;
     const turno      = document.getElementById('turno').value;
-    const notas      = document.getElementById('notas').value;
     const alerta     = document.getElementById('alert');
-    const btn        = document.getElementById('btnConfirmar');
 
     if (!nombre_org) { alerta.textContent='Ingresa el nombre de la organización'; alerta.className='alert alert-error'; return; }
+    if (ruc && !/^\d{11}$/.test(ruc)) { alerta.textContent='El RUC debe tener 11 dígitos numéricos'; alerta.className='alert alert-error'; return; }
     if (!fecha)      { alerta.textContent='Selecciona la fecha'; alerta.className='alert alert-error'; return; }
     if (!turno)      { alerta.textContent='Selecciona el turno'; alerta.className='alert alert-error'; return; }
     if (canchasSeleccionadas.length < 3) { alerta.textContent='Selecciona al menos 3 canchas'; alerta.className='alert alert-error'; return; }
+    alerta.className='alert hidden';
+    return true;
+  }
 
-    btn.textContent='Procesando...'; btn.disabled=true; alerta.className='alert hidden';
+  function construirPayload(destino) {
+    const ruc = document.getElementById('ruc').value.trim();
+    const calculo = obtenerCalculoActual();
+    const montoSiguiente = destino === 'online_adelanto' ? calculo.adelanto : calculo.total;
+    return {
+      origen_hu: 'HU-12',
+      destino,
+      rol: usuario.rol,
+      organizacion: document.getElementById('nombre_org').value.trim(),
+      ruc: ruc || null,
+      fecha: document.getElementById('fecha').value,
+      turno: document.getElementById('turno').value,
+      notas: document.getElementById('notas').value.trim() || null,
+      cancha_ids: canchasSeleccionadas.map(c => c.id),
+      canchas: canchasSeleccionadas.map(c => ({ id: c.id, nombre: c.nombre, precio: parseFloat(c.precio) })),
+      horas: calculo.h,
+      precio_base: calculo.precioBase,
+      monto_total: calculo.total,
+      monto_adelanto: calculo.adelanto,
+      monto_siguiente: montoSiguiente,
+      preparado_en: new Date().toISOString()
+    };
+  }
 
-    try {
-      const resp = await api.post('/api/reservas-grandes', {
-        nombre_org, ruc: ruc||null, fecha, turno,
-        cancha_ids: canchasSeleccionadas.map(c=>c.id),
-        notas: notas||null, origen:'linea'
-      });
-      document.getElementById('formReserva').style.display='none';
-      document.getElementById('codigoReserva').textContent = `Código: ${resp.codigo} · Total: S/ ${parseFloat(resp.precio_total).toFixed(2)}`;
-      document.getElementById('successMsg').classList.remove('hidden');
-    } catch(err) {
-      alerta.textContent=err.message; alerta.className='alert alert-error';
-      btn.textContent='Confirmar reserva grande →'; btn.disabled=false;
-    }
+  function mostrarPasoPreparado(payload, titulo, detalle) {
+    document.getElementById('formReserva').style.display='none';
+    document.getElementById('resultadoTitulo').textContent = titulo;
+    document.getElementById('codigoReserva').textContent = `${payload.organizacion} · ${payload.fecha} · Total: S/ ${payload.monto_total.toFixed(2)}`;
+    document.getElementById('resultadoDetalle').textContent = detalle;
+    document.getElementById('successMsg').classList.remove('hidden');
+  }
+
+  function prepararPagoOnline(tipo) {
+    if (!validarFormularioCompleto()) return;
+    const destino = tipo === 'adelanto' ? 'online_adelanto' : 'online_completo';
+    const payload = construirPayload(destino);
+    sessionStorage.setItem('reservaGrandeDraft', JSON.stringify(payload));
+    mostrarPasoPreparado(
+      payload,
+      tipo === 'adelanto' ? 'Adelanto preparado' : 'Pago completo preparado',
+      `Se dejó listo el siguiente paso de pago en línea por S/ ${payload.monto_siguiente.toFixed(2)} sin integrar pasarela real.`
+    );
+  }
+
+  function continuarPagoPresencial() {
+    if (!validarFormularioCompleto()) return;
+    const payload = construirPayload('presencial_hu06');
+    sessionStorage.setItem('reservaGrandeDraft', JSON.stringify(payload));
+    window.location.href = 'recepcion.html?origen=reserva-grande';
   }
 
   let canchasOcupadas = [];

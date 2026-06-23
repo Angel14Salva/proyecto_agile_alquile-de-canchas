@@ -122,7 +122,7 @@
       return;
     }
     const badgeEstado = (e) => {
-      const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray' };
+      const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray', pendiente_reembolso:'badge-amber' };
       return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
     };
     const badgePago = (e) => {
@@ -151,7 +151,7 @@
               <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
                 ${puedeModificar(r) ? `<button class="btn-secondary btn-sm" onclick="abrirModal(${r.id})">✏️ Editar</button>` : ''}
-                ${(r.estado==='pendiente'||r.estado==='confirmada') ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
+                ${puedeCancelarLinea(r) ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
               </td>
             </tr>`).join('')}
         </tbody>
@@ -195,13 +195,25 @@
     } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
   }
 
+  function puedeCancelarLinea(r) {
+    if (!['pendiente','confirmada'].includes(r.estado)) return false;
+    if (r.estado === 'pendiente_reembolso') return false;
+    if (r.pago_estado !== 'pagado') return false;
+    const fh = new Date(`${r.fecha?.substring(0,10)}T${r.hora_inicio?.substring(0,5)}:00`);
+    return fh > new Date();
+  }
+
   async function cancelar(id) {
-    if (!confirm('¿Cancelar esta reserva? Solo puedes cancelar con al menos 2 horas de anticipación.')) return;
     const alerta = document.getElementById('alert');
     try {
-      await api.delete(`/api/reservas/${id}`);
-      alerta.textContent = 'Reserva cancelada correctamente';
-      alerta.className = 'alert alert-success';
+      const preview = await api.get(`/api/reservas/${id}/cancelar-linea/preview`);
+      const msg = `¿Cancelar reserva ${preview.reserva.codigo}? Reembolso: S/ ${parseFloat(preview.monto_reembolsar).toFixed(2)} (${preview.tipo_pago})`;
+      if (!confirm(msg)) return;
+      const resp = await api.post(`/api/reservas/${id}/cancelar-linea`, {});
+      alerta.textContent = resp.pendiente_reembolso
+        ? '⚠️ Cancelación en revisión — reembolso pendiente de pasarela'
+        : '✅ Reserva cancelada y reembolso procesado';
+      alerta.className = resp.pendiente_reembolso ? 'alert alert-error' : 'alert alert-success';
       cargar();
     } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
   }

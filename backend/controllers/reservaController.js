@@ -1,6 +1,9 @@
 'use strict';
 const db = require('../db/connection');
 const { enviarConfirmacionReserva, enviarCancelacionReserva } = require('../services/emailService');
+const cancelacionService = require('../services/cancelacionService');
+const cancelacionLineaService = require('../services/cancelacionLineaService');
+const { validarBusquedaCancelacion } = require('../validators/cancelacionValidator');
 
 class ReservaController {
   async #generarCodigo() {
@@ -11,17 +14,31 @@ class ReservaController {
   }
   async getAll(req, res) {
     try {
-      const { fecha, estado, cancha_id } = req.query;
+      const { fecha, estado, cancha_id, desde, hasta } = req.query;
       const { userId, rol } = req.user;
-      let query = 'SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as usuario_nombre, u.email as cliente_email, u.telefono as cliente_telefono, p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id LEFT JOIN pagos p ON p.reserva_id = r.id WHERE 1=1';
+      let query = `SELECT r.*, c.nombre as cancha_nombre, c.precio_hora, u.nombre as usuario_nombre,
+        u.email as cliente_email, u.telefono as cliente_telefono,
+        p.estado as pago_estado, p.metodo as pago_metodo, p.monto as pago_monto, p.tipo_pago,
+        ur.nombre as recepcionista_nombre
+        FROM reservas r
+        JOIN canchas c ON r.cancha_id = c.id
+        JOIN usuarios u ON r.usuario_id = u.id
+        LEFT JOIN pagos p ON p.reserva_id = r.id
+        LEFT JOIN usuarios ur ON p.registrado_por = ur.id
+        WHERE 1=1`;
       const params = [];
-      if (rol === 'cliente') { query += ' AND r.usuario_id = ?'; params.push(userId); }
-      if (fecha)     { query += ' AND r.fecha = ?';     params.push(fecha); }
-      if (estado)    { query += ' AND r.estado = ?';    params.push(estado); }
+      if (rol === 'cliente') {
+        query += ' AND r.usuario_id = ?';
+        params.push(userId);
+        query += ' AND r.created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)';
+      }
+      if (fecha)     { query += ' AND r.fecha = ?'; params.push(fecha); }
+      if (desde)     { query += ' AND r.fecha >= ?'; params.push(desde); }
+      if (hasta)     { query += ' AND r.fecha <= ?'; params.push(hasta); }
+      if (estado)    { query += ' AND r.estado = ?'; params.push(estado); }
       if (cancha_id) { query += ' AND r.cancha_id = ?'; params.push(cancha_id); }
       query += ' ORDER BY r.fecha ASC, r.hora_inicio ASC';
       const [reservas] = await db.query(query, params);
-      // Normalizar: cliente_nombre = nombre guardado en reserva, o nombre del usuario si no existe
       reservas.forEach(r => {
         r.cliente_nombre = r.cliente_nombre || r.usuario_nombre;
         delete r.usuario_nombre;
@@ -144,7 +161,14 @@ class ReservaController {
   async cancel(req, res) {
     const { id } = req.params;
     try {
-      const [rows] = await db.query('SELECT * FROM reservas WHERE id = ?', [id]);
+      const [rows] = await db.query(
+        `SELECT r.*, c.nombre AS cancha_nombre, u.email AS cliente_email, u.nombre AS usuario_nombre
+         FROM reservas r
+         JOIN canchas c ON r.cancha_id = c.id
+         JOIN usuarios u ON r.usuario_id = u.id
+         WHERE r.id = ?`,
+        [id]
+      );
       if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
       const reserva = rows[0];
       if (req.user.rol === 'cliente' && reserva.usuario_id !== req.user.userId) return res.status(403).json({ error: 'Acceso denegado' });
@@ -156,25 +180,83 @@ class ReservaController {
       }
       await db.query('UPDATE reservas SET estado = "cancelada" WHERE id = ?', [id]);
       res.json({ message: 'Reserva cancelada correctamente' });
-      // Enviar correo de cancelación
       try {
-        const [urows] = await db.query('SELECT u.nombre, u.email FROM usuarios u JOIN reservas r ON r.usuario_id = u.id WHERE r.id = ?', [id]);
-        if (urows.length > 0) {
-          await enviarCancelacionReserva(urows[0].email, {
-            nombre: urows[0].nombre,
-            codigo: reserva.codigo,
-            cancha: reserva.cancha_nombre || '',
-            fecha: reserva.fecha?.substring(0,10),
-            horaInicio: reserva.hora_inicio?.substring(0,5),
-            horaFin: reserva.hora_fin?.substring(0,5)
-          });
-        }
-      } catch(mailErr) { console.error('Error enviando correo cancelacion:', mailErr.message); }
+        await enviarCancelacionReserva(reserva.cliente_email, {
+          nombre: reserva.cliente_nombre || reserva.usuario_nombre,
+          codigo: reserva.codigo,
+          cancha: reserva.cancha_nombre || '',
+          fecha: reserva.fecha?.toISOString?.().substring(0, 10) || String(reserva.fecha).substring(0, 10),
+          horaInicio: String(reserva.hora_inicio).substring(0, 5),
+          horaFin: String(reserva.hora_fin).substring(0, 5)
+        });
+      } catch (mailErr) { console.error('Error enviando correo cancelacion:', mailErr.message); }
     } catch (err) {
       console.error('Error en cancel reserva:', err);
       res.status(500).json({ error: 'Error al cancelar reserva' });
     }
   }
+
+  async buscarCancelacion(req, res) {
+    const validacion = validarBusquedaCancelacion(req.query.q);
+    if (!validacion.valido) return res.status(validacion.status).json({ error: validacion.error });
+
+    try {
+      const reservas = await cancelacionService.buscarReservas(validacion.termino);
+      if (reservas.length === 0) return res.status(404).json({ error: 'No se encontraron reservas con ese criterio' });
+      res.json(reservas);
+    } catch (err) {
+      console.error('Error en buscarCancelacion:', err);
+      res.status(500).json({ error: 'Error al buscar reservas' });
+    }
+  }
+
+  async cancelarRecepcion(req, res) {
+    const { id } = req.params;
+    const { reembolso_confirmado, reembolso_metodo } = req.body || {};
+
+    try {
+      const resultado = await cancelacionService.cancelarRecepcion(parseInt(id, 10), {
+        reembolsoConfirmado: Boolean(reembolso_confirmado),
+        reembolsoMetodo: reembolso_metodo || null,
+        canceladoPorUserId: req.user.userId
+      });
+
+      if (!resultado.ok) {
+        return res.status(resultado.status).json({ error: resultado.error });
+      }
+
+      res.json({
+        message: resultado.message,
+        reserva: resultado.reserva,
+        nota_credito: resultado.nota_credito,
+        monto_reembolsado: resultado.monto_reembolsado
+      });
+    } catch (err) {
+      console.error('Error en cancelarRecepcion:', err);
+      res.status(500).json({ error: 'Error al cancelar reserva' });
+    }
+  }
+  async cancelarLineaPreview(req, res) {
+    try {
+      const resultado = await cancelacionLineaService.preview(parseInt(req.params.id, 10), req.user.userId);
+      if (!resultado.ok) return res.status(resultado.status || 404).json({ error: resultado.error });
+      res.json(resultado);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al consultar cancelacion' });
+    }
+  }
+
+  async cancelarLinea(req, res) {
+    try {
+      const resultado = await cancelacionLineaService.cancelar(parseInt(req.params.id, 10), req.user.userId);
+      if (!resultado.ok) return res.status(resultado.status || 400).json({ error: resultado.error });
+      res.json(resultado);
+    } catch (err) {
+      console.error('Error cancelar linea:', err);
+      res.status(500).json({ error: 'Error al cancelar reserva' });
+    }
+  }
+
   async generarCodigo() {
     const anio = new Date().getFullYear();
     const [rows] = await db.query('SELECT COUNT(*) as total FROM reservas WHERE YEAR(created_at) = ?', [anio]);
