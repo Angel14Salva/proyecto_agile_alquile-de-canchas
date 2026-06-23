@@ -187,7 +187,7 @@ class AuthController {
       try {
         await enviarRecuperacionPassword(email, { nombre: rows[0].nombre || 'Usuario', resetUrl });
       } catch (mailErr) {
-        console.error('Error enviando correo recuperacion:', mailErr.message);
+        console.error('ERROR BREVO RECUPERACION:', mailErr.message, mailErr.stack);
       }
 
       await registrarAudit(req, { usuarioId: rows[0].id, email, accion: 'forgot_password', resultado: 'exitoso' });
