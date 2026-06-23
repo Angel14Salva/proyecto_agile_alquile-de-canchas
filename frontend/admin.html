@@ -120,6 +120,7 @@
 
   let canchasData = [];
   if (_hash) {
+    document.getElementById("tabsBar").style.display = "none";
     mostrarTab(_hash);
   }
   window.addEventListener('hashchange', () => {
