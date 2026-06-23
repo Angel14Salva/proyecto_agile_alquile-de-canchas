@@ -49,9 +49,9 @@ class FlowController {
       const r = reserva[0];
       const params = {
         commerceOrder : 'PSC-' + reserva_id + '-' + Date.now(),
-        subject       : 'Reserva ' + r.codigo + ' - Pacific Sport Center',
+        subject       : 'Reserva ' + r.codigo + ' S/' + r.precio_hora + ' - Pacific Sport Center',
         currency      : 'CLP',
-        amount        : Math.max(350, Math.round(parseFloat(r.precio_hora) * 35)),
+        amount        : 350,
         email         : r.email,
         paymentMethod : 11,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION,
