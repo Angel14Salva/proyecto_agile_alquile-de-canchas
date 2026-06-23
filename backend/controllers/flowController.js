@@ -93,6 +93,29 @@ class FlowController {
     }
   }
 
+  async retorno(req, res) {
+    const { reserva_id } = req.body;
+    if (!reserva_id) return res.status(400).json({ error: 'reserva_id requerido' });
+    try {
+      const [pagoExiste] = await db.query('SELECT id FROM pagos WHERE reserva_id = ?', [reserva_id]);
+      if (pagoExiste.length === 0) {
+        const [cancha] = await db.query(
+          'SELECT c.precio_hora FROM reservas r JOIN canchas c ON r.cancha_id = c.id WHERE r.id = ?',
+          [reserva_id]
+        );
+        await db.query(
+          'INSERT INTO pagos (reserva_id, monto, metodo, estado, referencia) VALUES (?, ?, "flow", "pagado", ?)',
+          [reserva_id, cancha[0]?.precio_hora || 0, 'flow-retorno-' + Date.now()]
+        );
+      }
+      await db.query('UPDATE reservas SET estado = "confirmada" WHERE id = ?', [reserva_id]);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('Error en retorno:', err?.message || err);
+      res.status(500).json({ error: 'Error al confirmar retorno' });
+    }
+  }
+
   async estado(req, res) {
     const { token } = req.query;
     if (!token) return res.status(400).json({ error: 'Token requerido' });

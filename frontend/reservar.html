@@ -336,6 +336,11 @@
   // Manejar retorno de Flow
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('status') === 'success' && urlParams.get('reserva')) {
+    // Confirmar pago en backend
+    try {
+      const token = urlParams.get('token');
+      if (token) await api.post('/api/pagos/flow/retorno', { token, reserva_id: urlParams.get('reserva') }, true);
+    } catch(e) { console.log('retorno flow:', e); }
     document.body.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f0fdf4;font-family:sans-serif">
         <div style="text-align:center;padding:40px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);max-width:400px">
