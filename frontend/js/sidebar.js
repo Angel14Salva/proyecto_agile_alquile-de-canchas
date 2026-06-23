@@ -10,7 +10,7 @@ function renderSidebar(activePage) {
     { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Nueva reserva',        roles: ['cliente','recepcionista'] },
     { page: 'mis-reservas',     href: 'mis-reservas.html',      icon: '📋', label: 'Mis reservas',         roles: ['cliente'] },
     { page: 'reserva-grande',   href: 'reserva-grande.html',    icon: '🏟️', label: 'Reserva grande',      roles: ['cliente','recepcionista'] },
-    { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',     roles: ['cliente','recepcionista'] },
+    { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',     roles: ['recepcionista'] },
     // Recepcionista
     { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',   roles: ['recepcionista'] },
     { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',            roles: ['recepcionista'] },
