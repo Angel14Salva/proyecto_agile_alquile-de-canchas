@@ -21,6 +21,9 @@ function renderSidebar(activePage) {
 
     // ── Gerente (admin) ────────────────────────────────────────────────
     { page: 'canchas',        href: 'canchas.html',         icon: '⚽', label: 'Canchas',             roles: ['admin'] },
+    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Nueva reserva',       roles: ['admin'] },
+    { page: 'reservas',       href: 'reservas.html',        icon: '📋', label: 'Todas las reservas',  roles: ['admin'] },
+    { page: 'recepcion',      href: 'recepcion.html',       icon: '🏢', label: 'Recepción',           roles: ['admin'] },
     { page: 'admin',          href: 'admin.html',           icon: '📊', label: 'Panel de informes',   roles: ['admin'] },
     { page: 'usuarios',       href: 'admin.html#usuarios',  icon: '👥', label: 'Gestión de usuarios', roles: ['admin'] },
   ];

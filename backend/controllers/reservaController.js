@@ -38,40 +38,71 @@ class ReservaController {
     }
   }
   async create(req, res) {
-    const { cancha_id, fecha, hora_inicio, hora_fin, notas, origen } = req.body;
+    const { cancha_id, fecha, hora_inicio, hora_fin, notas, cliente_nombre, cliente_dni } = req.body;
     const usuario_id = req.user.userId;
-    if (!cancha_id || !fecha || !hora_inicio || !hora_fin) return res.status(400).json({ error: 'Cancha, fecha, hora inicio y hora fin son requeridos' });
+    const rol        = req.user.rol;
+
+    if (!cancha_id || !fecha || !hora_inicio || !hora_fin)
+      return res.status(400).json({ error: 'Cancha, fecha, hora inicio y hora fin son requeridos' });
+
+    // Validar nombre y DNI del cliente (obligatorios para todos los roles)
+    if (!cliente_nombre || !cliente_nombre.trim())
+      return res.status(400).json({ error: 'El nombre del cliente es requerido' });
+    if (!cliente_dni || !/^\d{8}$/.test(cliente_dni))
+      return res.status(400).json({ error: 'El DNI debe tener exactamente 8 dígitos numéricos' });
+
+    const ahora       = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     const fechaReserva = new Date(fecha + 'T' + hora_inicio);
-    const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
-    const diff  = (fechaReserva - ahora) / 1000 / 60;
-    if (diff < 60) return res.status(400).json({ error: 'No se puede reservar con menos de 1 hora de anticipacion' });
+    const diffMin     = (fechaReserva - ahora) / 1000 / 60;
+    if (diffMin < 60)
+      return res.status(400).json({ error: 'No se puede reservar con menos de 1 hora de anticipacion' });
+
+    // Límite: máximo 7 días desde hoy
+    const limite = new Date(ahora);
+    limite.setDate(limite.getDate() + 7);
+    limite.setHours(23, 59, 59, 999);
+    if (fechaReserva > limite)
+      return res.status(400).json({ error: 'Solo se pueden reservar canchas con hasta 7 días de anticipación' });
+
+    // Origen según rol del usuario autenticado
+    const origenFinal = (rol === 'recepcionista' || rol === 'admin') ? 'recepcion' : 'linea';
+
     try {
       const [ocupado] = await db.query('SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND hora_inicio = ? AND estado != "cancelada"', [cancha_id, fecha, hora_inicio]);
       if (ocupado.length > 0) return res.status(409).json({ error: 'Ese horario ya esta reservado' });
+
       const [cancha] = await db.query('SELECT id, precio_hora FROM canchas WHERE id = ? AND activo = TRUE', [cancha_id]);
       if (cancha.length === 0) return res.status(404).json({ error: 'Cancha no encontrada' });
+
       const anio = new Date().getFullYear();
       const [crows] = await db.query('SELECT COUNT(*) as total FROM reservas WHERE YEAR(created_at) = ?', [anio]);
-      const num = String(crows[0].total + 1).padStart(3, '0');
+      const num    = String(crows[0].total + 1).padStart(3, '0');
       const codigo = `RES-${anio}-${num}`;
-      const [result] = await db.query('INSERT INTO reservas (codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, origen, notas) VALUES (?, ?, ?, ?, ?, ?, "pendiente", ?, ?)', [codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, origen || 'linea', notas || null]);
+
+      const [result] = await db.query(
+        'INSERT INTO reservas (codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, origen, notas, cliente_nombre, cliente_dni) VALUES (?, ?, ?, ?, ?, ?, "pendiente", ?, ?, ?, ?)',
+        [codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, origenFinal, notas || null, cliente_nombre.trim(), cliente_dni]
+      );
+
       res.status(201).json({ message: 'Reserva creada exitosamente', reserva_id: result.insertId, codigo, estado: 'pendiente' });
+
       // Enviar correo de confirmación
       try {
-        const [urows] = await db.query('SELECT nombre, email FROM usuarios WHERE id = ?', [usuario_id]);
+        const [urows]  = await db.query('SELECT nombre, email FROM usuarios WHERE id = ?', [usuario_id]);
         const [crows2] = await db.query('SELECT nombre FROM canchas WHERE id = ?', [cancha_id]);
         if (urows.length > 0) {
           await enviarConfirmacionReserva(urows[0].email, {
-            nombre: urows[0].nombre,
+            nombre:     cliente_nombre.trim(),
             codigo,
-            cancha: crows2[0]?.nombre || '',
+            cancha:     crows2[0]?.nombre || '',
             fecha,
-            horaInicio: hora_inicio.substring(0,5),
-            horaFin: hora_fin.substring(0,5),
-            monto: cancha[0].precio_hora
+            horaInicio: hora_inicio.substring(0, 5),
+            horaFin:    hora_fin.substring(0, 5),
+            monto:      cancha[0].precio_hora
           });
         }
       } catch(mailErr) { console.error('Error enviando correo:', mailErr.message); }
+
     } catch (err) {
       console.error('Error en create reserva:', err);
       res.status(500).json({ error: 'Error al crear reserva' });
