@@ -1,22 +1,35 @@
-// sidebar.js — genera el sidebar según rol del usuario
+// sidebar.js — menú lateral dinámico según rol (HU-16)
 function renderSidebar(activePage) {
   const usuario = api.getUsuario();
   const rol = usuario?.rol;
 
   const items = [
-    { page: 'dashboard', href: 'dashboard.html', icon: '🏠', label: 'Dashboard', roles: ['admin','recepcionista','cliente'] },
-    { page: 'canchas',   href: 'canchas.html',   icon: '⚽', label: 'Canchas',       roles: ['admin','recepcionista','cliente'] },
-    { page: 'reservar',  href: 'reservar.html',  icon: '📅', label: 'Reservar',       roles: ['admin','recepcionista','cliente'] },
-    { page: 'mis-reservas', href: 'mis-reservas.html', icon: '📋', label: 'Mis reservas', roles: ['cliente'] },
-    { page: 'reserva-grande', href: 'reserva-grande.html', icon: '🏟️', label: 'Reserva grande', roles: ['admin','recepcionista','cliente'] },
-    { page: 'reservas',  href: 'reservas.html',  icon: '📋', label: 'Reservas',       roles: ['admin','recepcionista'] },
-    { page: 'recepcion', href: 'recepcion.html', icon: '🏢', label: 'Recepción',      roles: ['admin','recepcionista'] },
-    { page: 'admin',     href: 'admin.html',     icon: '⚙️', label: 'Administración', roles: ['admin'] },
+    // ── Todos ──────────────────────────────────────────────────────────
+    { page: 'dashboard',      href: 'dashboard.html',      icon: '🏠', label: 'Dashboard',          roles: ['admin','recepcionista','cliente'] },
+
+    // ── Cliente ────────────────────────────────────────────────────────
+    { page: 'canchas',        href: 'canchas.html',         icon: '⚽', label: 'Canchas',             roles: ['cliente'] },
+    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Reservar',            roles: ['cliente'] },
+    { page: 'mis-reservas',   href: 'mis-reservas.html',    icon: '📋', label: 'Mis reservas',        roles: ['cliente'] },
+    { page: 'reserva-grande', href: 'reserva-grande.html',  icon: '🏟️', label: 'Reserva grande',     roles: ['cliente'] },
+
+    // ── Recepcionista ──────────────────────────────────────────────────
+    { page: 'reservar',       href: 'reservar.html',        icon: '📅', label: 'Nueva reserva',       roles: ['recepcionista'] },
+    { page: 'reserva-grande', href: 'reserva-grande.html',  icon: '🏟️', label: 'Reserva grande',     roles: ['recepcionista'] },
+    { page: 'reservas',       href: 'reservas.html',        icon: '📋', label: 'Todas las reservas',  roles: ['recepcionista'] },
+    { page: 'recepcion',      href: 'recepcion.html',       icon: '🏢', label: 'Recepción',           roles: ['recepcionista'] },
+
+    // ── Gerente (admin) ────────────────────────────────────────────────
+    { page: 'canchas',        href: 'canchas.html',         icon: '⚽', label: 'Canchas',             roles: ['admin'] },
+    { page: 'admin',          href: 'admin.html',           icon: '📊', label: 'Panel de informes',   roles: ['admin'] },
+    { page: 'usuarios',       href: 'admin.html#usuarios',  icon: '👥', label: 'Gestión de usuarios', roles: ['admin'] },
   ];
 
   const visibles = items.filter(i => i.roles.includes(rol));
-  const sidebar = document.getElementById('sidebar');
+  const sidebar  = document.getElementById('sidebar');
   if (!sidebar) return;
+
+  const rolLabel = { admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' };
 
   sidebar.innerHTML = `
     <div class="sidebar-section">Menú</div>
@@ -29,7 +42,7 @@ function renderSidebar(activePage) {
     <div style="padding:12px 16px;font-size:12px;color:var(--gray-muted)">
       ${usuario?.nombre}<br>
       <span style="font-size:11px;background:var(--green-light);color:var(--green);padding:2px 7px;border-radius:10px;margin-top:4px;display:inline-block">
-        ${{ admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' }[rol] || rol}
+        ${rolLabel[rol] || rol}
       </span>
     </div>
   `;

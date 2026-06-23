@@ -23,18 +23,44 @@
     <nav class="sidebar" id="sidebar"></nav>
     <main class="content">
       <div class="page-header">
-        <div><div class="page-title">Todas las reservas</div><div class="page-sub">Gestión completa de reservas</div></div>
-        <div style="display:flex;gap:8px">
-          <select id="filtroEstado" onchange="filtrar()">
-            <option value="">Todos los estados</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="confirmada">Confirmada</option>
-            <option value="completada">Completada</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-          <input type="date" id="filtroFecha" onchange="filtrar()">
+        <div><div class="page-title">Todas las reservas</div><div class="page-sub">Listado completo con filtros</div></div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card" style="margin-bottom:12px;padding:12px 16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px">Fecha</label>
+            <input type="date" id="filtroFecha" onchange="filtrar()">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px">Estado</label>
+            <select id="filtroEstado" onchange="filtrar()">
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="completada">Completada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px">Cancha</label>
+            <select id="filtroCancha" onchange="filtrar()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:11px">Origen</label>
+            <select id="filtroOrigen" onchange="filtrar()">
+              <option value="">Todos</option>
+              <option value="linea">En línea</option>
+              <option value="recepcion">Recepción</option>
+            </select>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="limpiarFiltros()">✕ Limpiar</button>
         </div>
       </div>
+
       <div id="alert" class="alert hidden"></div>
       <div class="card">
         <div id="tablaReservas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
@@ -47,36 +73,84 @@
 <script src="js/sidebar.js"></script>
 <script>
   requireAuth();
-  requireRole('admin','recepcionista');
+  requireRole('admin', 'recepcionista');
   renderSidebar('reservas');
-  document.getElementById('topbarUser').textContent = "👤 " + api.getUsuario().nombre;
+  document.getElementById('topbarUser').textContent = '👤 ' + api.getUsuario().nombre;
+
   let reservas = [];
+
   async function cargar() {
     try {
       reservas = await api.get('/api/reservas');
+
+      // Poblar selector de canchas con valores únicos
+      const canchas = [...new Map(reservas.map(r => [r.cancha_id, r.cancha_nombre])).entries()];
+      const sel = document.getElementById('filtroCancha');
+      canchas.sort((a,b) => a[1].localeCompare(b[1])).forEach(([id, nombre]) => {
+        const opt = document.createElement('option');
+        opt.value = id; opt.textContent = nombre;
+        sel.appendChild(opt);
+      });
+
       filtrar();
     } catch(err) {
-      document.getElementById('tablaReservas').innerHTML = "<p style='color:var(--red)'>" + err.message + "</p>";
+      document.getElementById('tablaReservas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
   }
+
   function filtrar() {
     const estado = document.getElementById('filtroEstado').value;
     const fecha  = document.getElementById('filtroFecha').value;
+    const cancha = document.getElementById('filtroCancha').value;
+    const origen = document.getElementById('filtroOrigen').value;
+
     let lista = reservas;
-    if (estado) lista = lista.filter(r => r.estado === estado);
-    if (fecha)  lista = lista.filter(r => r.fecha === fecha);
+    if (estado) lista = lista.filter(r => r.estado   === estado);
+    if (fecha)  lista = lista.filter(r => r.fecha?.substring(0,10) === fecha);
+    if (cancha) lista = lista.filter(r => String(r.cancha_id) === cancha);
+    if (origen) lista = lista.filter(r => r.origen   === origen);
+
     renderTabla(lista);
   }
+
+  function limpiarFiltros() {
+    ['filtroEstado','filtroFecha','filtroCancha','filtroOrigen'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    filtrar();
+  }
+
   function renderTabla(lista) {
     if (lista.length === 0) {
-      document.getElementById('tablaReservas').innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No hay reservas</div>';
+      document.getElementById('tablaReservas').innerHTML =
+        '<div class="empty"><div class="empty-icon">📭</div>No hay reservas con esos filtros</div>';
       return;
     }
-    const b = (e) => { const m={confirmada:'badge-green',pendiente:'badge-amber',cancelada:'badge-red',completada:'badge-gray'}; return "<span class='badge " + (m[e]||'badge-gray') + "'>" + e + "</span>"; };
-    document.getElementById('tablaReservas').innerHTML = "<table><thead><tr><th>Código</th><th>Cliente</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Origen</th></tr></thead><tbody>" +
-      lista.map(r => "<tr><td><code style='font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px'>" + (r.codigo||'—') + "</code></td><td>" + r.cliente_nombre + "</td><td>" + r.cancha_nombre + "</td><td>" + r.fecha.substring(0,10) + "</td><td>" + (r.hora_inicio||'').substring(0,5) + " – " + (r.hora_fin||'').substring(0,5) + "</td><td>" + b(r.estado) + "</td><td>" + (r.pago_estado ? "<span class='badge " + (r.pago_estado==='pagado'?'badge-green':'badge-amber') + "'>" + r.pago_estado + "</span>" : "<span class='badge badge-amber'>pendiente</span>") + "</td><td><span class='badge " + (r.origen==='linea'?'badge-blue':'badge-amber') + "'>" + (r.origen==='linea'?'En línea':'Recepción') + "</span></td></tr>").join('') +
-      "</tbody></table>";
+    const b = (e) => {
+      const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray' };
+      return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
+    };
+    document.getElementById('tablaReservas').innerHTML =
+      `<table>
+        <thead><tr><th>Código</th><th>Cliente</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Origen</th></tr></thead>
+        <tbody>
+          ${lista.map(r => `<tr>
+            <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
+            <td>${r.cliente_nombre}</td>
+            <td>${r.cancha_nombre}</td>
+            <td>${r.fecha?.substring(0,10)}</td>
+            <td>${(r.hora_inicio||'').substring(0,5)} – ${(r.hora_fin||'').substring(0,5)}</td>
+            <td>${b(r.estado)}</td>
+            <td>${r.pago_estado
+              ? `<span class="badge ${r.pago_estado==='pagado'?'badge-green':'badge-amber'}">${r.pago_estado}</span>`
+              : '<span class="badge badge-amber">pendiente</span>'}</td>
+            <td><span class="badge ${r.origen==='linea'?'badge-blue':'badge-amber'}">
+              ${r.origen==='linea'?'En línea':'Recepción'}</span></td>
+          </tr>`).join('')}
+        </tbody>
+       </table>`;
   }
+
   cargar();
 </script>
 </body>

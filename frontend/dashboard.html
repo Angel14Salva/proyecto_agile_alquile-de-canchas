@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Pacific Sport Center</title>
 <link rel="stylesheet" href="css/main.css">
+<style>
+  .bar-wrap { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .bar-row  { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .bar-label{ width:130px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--gray-text); }
+  .bar-track{ flex:1; background:var(--gray-bg,#f0f0f0); border-radius:4px; height:14px; }
+  .bar-fill { height:14px; background:var(--green,#22c55e); border-radius:4px; transition:width .4s; }
+  .bar-val  { width:36px; text-align:right; font-weight:600; color:var(--green); }
+
+  .sparkline { display:flex; align-items:flex-end; gap:4px; height:60px; margin-top:8px; }
+  .spark-bar { flex:1; background:var(--green-light,#dcfce7); border:1px solid var(--green-border,#bbf7d0); border-radius:3px 3px 0 0; position:relative; }
+  .spark-bar:hover { background:var(--green,#22c55e); }
+  .spark-lbl { font-size:9px; color:var(--gray-muted); text-align:center; margin-top:3px; }
+</style>
 </head>
 <body>
 <div class="app-layout">
@@ -16,7 +29,7 @@
     </a>
     <div class="topbar-right">
       <span class="topbar-user" id="topbarUser"></span>
-      <button class="topbar-btn" onclick="cerrarSesion()">Salir</button>
+      <button class="topbar-btn" onclick="api.logout()">Salir</button>
     </div>
   </header>
 
@@ -26,71 +39,95 @@
     <main class="content">
       <div class="page-header">
         <div>
-          <div class="page-title">Dashboard</div>
+          <div class="page-title" id="pageTitle">Dashboard</div>
           <div class="page-sub" id="fechaHoy"></div>
         </div>
-        <!-- Acción principal según rol -->
         <div id="accionPrincipal"></div>
       </div>
 
-      <!-- ── MÉTRICAS (admin y recepcionista) ───────────────────────── -->
-      <div id="seccionMetricas" class="grid4" style="margin-bottom:16px;display:none">
-        <div class="metric"><div class="metric-val" id="mReservasHoy">—</div><div class="metric-lbl">Reservas hoy</div><div class="metric-tag">Hoy</div></div>
-        <div class="metric"><div class="metric-val" id="mIngresos">—</div><div class="metric-lbl">Ingresos hoy</div><div class="metric-tag">Estimado</div></div>
-        <div class="metric"><div class="metric-val" id="mCanchas">—</div><div class="metric-lbl">Canchas activas</div></div>
-        <div class="metric"><div class="metric-val" id="mPendientes">—</div><div class="metric-lbl">Pendientes pago</div></div>
-      </div>
+      <!-- ══════════════════════════════════════════════════════════════
+           PANEL GERENTE (admin)
+      ══════════════════════════════════════════════════════════════ -->
+      <div id="panelGerente" style="display:none">
 
-      <!-- ── RESERVAS HOY + ESTADO CANCHAS (admin y recepcionista) ──── -->
-      <div id="seccionGestion" class="grid2" style="display:none">
-        <div class="card">
-          <div class="card-title">📋 Reservas de hoy</div>
-          <div id="reservasHoy"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+        <!-- Métricas del mes -->
+        <div class="grid4" style="margin-bottom:16px">
+          <div class="metric"><div class="metric-val" id="gReservasMes">—</div><div class="metric-lbl">Reservas del mes</div><div class="metric-tag">Mes actual</div></div>
+          <div class="metric"><div class="metric-val" id="gIngresosMes">—</div><div class="metric-lbl">Ingresos del mes</div><div class="metric-tag">Estimado</div></div>
+          <div class="metric"><div class="metric-val" id="gCanchas">—</div><div class="metric-lbl">Canchas activas</div></div>
+          <div class="metric"><div class="metric-val" id="gPendientesMes">—</div><div class="metric-lbl">Pendientes de pago</div></div>
         </div>
-        <div class="card">
-          <div class="card-title">⚽ Estado de canchas</div>
-          <div id="estadoCanchas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-        </div>
-      </div>
 
-      <!-- ── ACCESOS RÁPIDOS GERENTE (solo admin) ───────────────────── -->
-      <div id="seccionAdmin" style="display:none;margin-top:16px">
-        <div class="card">
-          <div class="card-title">⚙️ Accesos rápidos — Gerente</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-            <a href="admin.html"     class="btn-primary">Administración</a>
-            <a href="reservas.html"  class="btn-secondary">Gestión de reservas</a>
-            <a href="recepcion.html" class="btn-secondary">Panel de recepción</a>
+        <div class="grid2" style="margin-bottom:16px">
+          <!-- Gráfico de reservas por semana del mes -->
+          <div class="card">
+            <div class="card-title">📈 Reservas — semanas del mes</div>
+            <div id="graficoSemanas"></div>
+          </div>
+
+          <!-- Ranking de canchas -->
+          <div class="card">
+            <div class="card-title">🏆 Ranking de canchas (mes)</div>
+            <div id="rankingCanchas"></div>
           </div>
         </div>
+
+        <!-- Control de caja por recepcionista -->
+        <div class="card">
+          <div class="card-title">💵 Control de caja por recepcionista (mes)</div>
+          <div id="controlCaja"></div>
+        </div>
       </div>
 
-      <!-- ── ACCESOS RÁPIDOS RECEPCIONISTA ──────────────────────────── -->
-      <div id="seccionRecepcion" style="display:none;margin-top:16px">
+      <!-- ══════════════════════════════════════════════════════════════
+           PANEL RECEPCIONISTA
+      ══════════════════════════════════════════════════════════════ -->
+      <div id="panelRecepcionista" style="display:none">
+
+        <div class="grid4" style="margin-bottom:16px">
+          <div class="metric"><div class="metric-val" id="rReservasHoy">—</div><div class="metric-lbl">Reservas hoy</div><div class="metric-tag">Hoy</div></div>
+          <div class="metric"><div class="metric-val" id="rIngresos">—</div><div class="metric-lbl">Ingresos hoy</div><div class="metric-tag">Estimado</div></div>
+          <div class="metric"><div class="metric-val" id="rCanchas">—</div><div class="metric-lbl">Canchas activas</div></div>
+          <div class="metric"><div class="metric-val" id="rPendientes">—</div><div class="metric-lbl">Pendientes pago</div></div>
+        </div>
+
+        <div class="grid2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-title">📋 Reservas de hoy</div>
+            <div id="rTablaReservas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚽ Estado de canchas</div>
+            <div id="rEstadoCanchas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
         <div class="card">
-          <div class="card-title">🏢 Accesos rápidos — Recepcionista</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <div class="card-title">🏢 Accesos rápidos</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
             <a href="recepcion.html" class="btn-primary">Cobro en caja</a>
-            <a href="reservas.html"  class="btn-secondary">Gestión de reservas</a>
+            <a href="reservas.html"  class="btn-secondary">Todas las reservas</a>
             <a href="reservar.html"  class="btn-secondary">Nueva reserva manual</a>
           </div>
         </div>
       </div>
 
-      <!-- ── PANEL CLIENTE ──────────────────────────────────────────── -->
-      <div id="seccionCliente" style="display:none">
-        <div class="grid2">
+      <!-- ══════════════════════════════════════════════════════════════
+           PANEL CLIENTE
+      ══════════════════════════════════════════════════════════════ -->
+      <div id="panelCliente" style="display:none">
+        <div class="grid2" style="margin-bottom:16px">
           <div class="card">
-            <div class="card-title">📅 Mis próximas reservas</div>
-            <div id="misReservas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+            <div class="card-title">📅 Mis reservas de hoy</div>
+            <div id="cReservasHoy"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
           </div>
           <div class="card">
             <div class="card-title">⚽ Canchas disponibles</div>
-            <div id="canchasDisponibles"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+            <div id="cCanchas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
           </div>
         </div>
-        <div style="margin-top:16px">
-          <a href="reservar.html"    class="btn-primary">+ Nueva reserva</a>
+        <div>
+          <a href="reservar.html"     class="btn-primary">+ Nueva reserva</a>
           <a href="mis-reservas.html" class="btn-secondary" style="margin-left:8px">Ver historial completo</a>
         </div>
       </div>
@@ -108,44 +145,140 @@
 
   const usuario = api.getUsuario();
   const rol     = usuario?.rol;
-
-  // Nombre de rol visible en UI (admin = Gerente)
   const rolLabel = { admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' };
-  document.getElementById('topbarUser').textContent = `👤 ${usuario.nombre} (${rolLabel[rol] || rol})`;
+  const hoy      = new Date();
+  const fechaStr = hoy.toISOString().split('T')[0];
 
-  const hoy = new Date();
+  document.getElementById('topbarUser').textContent =
+    `👤 ${usuario.nombre} (${rolLabel[rol] || rol})`;
   document.getElementById('fechaHoy').textContent =
-    hoy.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    hoy.toLocaleDateString('es-PE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-  // ── Mostrar secciones según rol ──────────────────────────────────────────
-  if (rol === 'admin' || rol === 'recepcionista') {
-    document.getElementById('seccionMetricas').style.display = '';
-    document.getElementById('seccionGestion').style.display  = '';
-    if (rol === 'admin')         document.getElementById('seccionAdmin').style.display     = '';
-    if (rol === 'recepcionista') document.getElementById('seccionRecepcion').style.display = '';
-    document.getElementById('accionPrincipal').innerHTML = '<a href="reservar.html" class="btn-primary">+ Nueva reserva</a>';
-    cargarDashboardGestion();
+  if (rol === 'admin') {
+    document.getElementById('pageTitle').textContent    = 'Panel de informes';
+    document.getElementById('panelGerente').style.display = '';
+    document.getElementById('accionPrincipal').innerHTML =
+      '<a href="admin.html" class="btn-primary">⚙️ Administración</a>';
+    cargarGerente();
+  } else if (rol === 'recepcionista') {
+    document.getElementById('panelRecepcionista').style.display = '';
+    document.getElementById('accionPrincipal').innerHTML =
+      '<a href="reservar.html" class="btn-primary">+ Nueva reserva</a>';
+    cargarRecepcionista();
+  } else {
+    document.getElementById('panelCliente').style.display = '';
+    cargarCliente();
   }
 
-  if (rol === 'cliente') {
-    document.getElementById('seccionCliente').style.display = '';
-    cargarDashboardCliente();
-  }
-
-  // ── Dashboard admin / recepcionista ─────────────────────────────────────
-  async function cargarDashboardGestion() {
+  // ── GERENTE ─────────────────────────────────────────────────────────────
+  async function cargarGerente() {
     try {
-      const fechaStr = hoy.toISOString().split('T')[0];
-      const reservas = await api.get(`/api/reservas?fecha=${fechaStr}`);
+      const inicioMes = fechaStr.substring(0,7) + '-01';
+      const [reservasMes, canchas] = await Promise.all([
+        api.get(`/api/reservas?desde=${inicioMes}&hasta=${fechaStr}`),
+        api.get('/api/canchas', false)
+      ]);
+
+      const pagadas    = reservasMes.filter(r => r.pago_estado === 'pagado');
+      const pendientes = reservasMes.filter(r => r.pago_estado !== 'pagado');
+      const ingresos   = pagadas.reduce((s,r) => s + parseFloat(r.precio_hora||0), 0);
+
+      document.getElementById('gReservasMes').textContent  = reservasMes.length;
+      document.getElementById('gIngresosMes').textContent  = `S/ ${ingresos.toFixed(2)}`;
+      document.getElementById('gCanchas').textContent      = canchas.length;
+      document.getElementById('gPendientesMes').textContent= pendientes.length;
+
+      renderGrafico(reservasMes, hoy);
+      renderRanking(reservasMes, canchas);
+      renderControlCaja(reservasMes);
+    } catch(err) { console.error('Error gerente:', err); }
+  }
+
+  function renderGrafico(reservas, hoy) {
+    // Agrupar por semana del mes (semana 1-5)
+    const semanas = [0,0,0,0,0];
+    reservas.forEach(r => {
+      const dia = new Date(r.fecha).getDate();
+      const idx = Math.min(Math.floor((dia-1)/7), 4);
+      semanas[idx]++;
+    });
+    const max = Math.max(...semanas, 1);
+    document.getElementById('graficoSemanas').innerHTML =
+      `<div class="sparkline">
+        ${semanas.map((v,i) => `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center">
+            <div class="spark-bar" style="width:100%;height:${Math.max(6, Math.round((v/max)*54))}px" title="${v} reservas"></div>
+            <div class="spark-lbl">S${i+1}<br>${v}</div>
+          </div>`).join('')}
+       </div>`;
+  }
+
+  function renderRanking(reservas, canchas) {
+    const conteo = {};
+    reservas.forEach(r => { conteo[r.cancha_id] = (conteo[r.cancha_id]||0)+1; });
+    const ranking = canchas
+      .map(c => ({ nombre: c.nombre, total: conteo[c.id]||0 }))
+      .sort((a,b) => b.total - a.total)
+      .slice(0, 6);
+    const max = Math.max(...ranking.map(r=>r.total), 1);
+    document.getElementById('rankingCanchas').innerHTML =
+      `<div class="bar-wrap">
+        ${ranking.map((r,i) => `
+          <div class="bar-row">
+            <span class="bar-label">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} ${r.nombre}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.round((r.total/max)*100)}%"></div></div>
+            <span class="bar-val">${r.total}</span>
+          </div>`).join('')}
+       </div>`;
+  }
+
+  function renderControlCaja(reservas) {
+    // Agrupar ingresos pagados por recepcionista (registrado_por)
+    const caja = {};
+    reservas.forEach(r => {
+      if (r.pago_estado !== 'pagado') return;
+      const key = r.recepcionista_nombre || 'En línea';
+      if (!caja[key]) caja[key] = { total: 0, count: 0 };
+      caja[key].total += parseFloat(r.precio_hora||0);
+      caja[key].count++;
+    });
+    const filas = Object.entries(caja).sort((a,b) => b[1].total - a[1].total);
+    if (filas.length === 0) {
+      document.getElementById('controlCaja').innerHTML =
+        '<div class="empty"><div class="empty-icon">💵</div>Sin datos de caja este mes</div>';
+      return;
+    }
+    document.getElementById('controlCaja').innerHTML =
+      `<table>
+        <thead><tr><th>Recepcionista</th><th>Cobros realizados</th><th>Total recaudado</th></tr></thead>
+        <tbody>
+          ${filas.map(([nombre,d]) => `
+            <tr>
+              <td><strong>${nombre}</strong></td>
+              <td>${d.count}</td>
+              <td><strong>S/ ${d.total.toFixed(2)}</strong></td>
+            </tr>`).join('')}
+        </tbody>
+       </table>`;
+  }
+
+  // ── RECEPCIONISTA ────────────────────────────────────────────────────────
+  async function cargarRecepcionista() {
+    try {
+      const [reservas, canchas] = await Promise.all([
+        api.get(`/api/reservas?fecha=${fechaStr}`),
+        api.get('/api/canchas', false)
+      ]);
       const pendientes = reservas.filter(r => r.pago_estado !== 'pagado');
+      const ingresos   = reservas.filter(r => r.pago_estado === 'pagado')
+        .reduce((s,r) => s + parseFloat(r.precio_hora||0), 0);
 
-      document.getElementById('mReservasHoy').textContent = reservas.length;
-      document.getElementById('mPendientes').textContent  = pendientes.length;
-      document.getElementById('mIngresos').textContent    =
-        'S/ ' + reservas.filter(r => r.pago_estado === 'pagado')
-          .reduce((s, r) => s + parseFloat(r.precio_hora || 0), 0).toFixed(2);
+      document.getElementById('rReservasHoy').textContent = reservas.length;
+      document.getElementById('rPendientes').textContent  = pendientes.length;
+      document.getElementById('rIngresos').textContent    = `S/ ${ingresos.toFixed(2)}`;
+      document.getElementById('rCanchas').textContent     = canchas.length;
 
-      document.getElementById('reservasHoy').innerHTML = reservas.length === 0
+      document.getElementById('rTablaReservas').innerHTML = reservas.length === 0
         ? '<div class="empty"><div class="empty-icon">📭</div>No hay reservas para hoy</div>'
         : `<table><thead><tr><th>Hora</th><th>Cancha</th><th>Cliente</th><th>Estado</th></tr></thead><tbody>
             ${reservas.map(r => `<tr>
@@ -155,57 +288,52 @@
             </tr>`).join('')}
            </tbody></table>`;
 
-      const canchas = await api.get('/api/canchas', false);
-      document.getElementById('mCanchas').textContent = canchas.length;
-      document.getElementById('estadoCanchas').innerHTML =
+      document.getElementById('rEstadoCanchas').innerHTML =
         `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
           ${canchas.map(c => `
             <div style="padding:8px 10px;border-radius:7px;background:var(--green-light);border:1px solid var(--green-border)">
               <div style="font-size:12px;font-weight:600;color:var(--green)">${c.nombre}</div>
-              <div style="font-size:11px;color:var(--green);margin-top:1px">S/ ${parseFloat(c.precio_hora).toFixed(2)}/hr</div>
+              <div style="font-size:11px;color:var(--green)">S/ ${parseFloat(c.precio_hora).toFixed(2)}/hr</div>
             </div>`).join('')}
          </div>`;
-    } catch (err) { console.error(err); }
+    } catch(err) { console.error('Error recepcionista:', err); }
   }
 
-  // ── Dashboard cliente ────────────────────────────────────────────────────
-  async function cargarDashboardCliente() {
+  // ── CLIENTE ──────────────────────────────────────────────────────────────
+  async function cargarCliente() {
     try {
-      const reservas = await api.get('/api/reservas');
-      const proximas = reservas
-        .filter(r => r.estado !== 'cancelada' && new Date(r.fecha) >= new Date(hoy.toDateString()))
-        .slice(0, 5);
+      const [reservas, canchas] = await Promise.all([
+        api.get('/api/reservas'),
+        api.get('/api/canchas', false)
+      ]);
 
-      document.getElementById('misReservas').innerHTML = proximas.length === 0
-        ? '<div class="empty"><div class="empty-icon">📭</div>No tienes reservas próximas</div>'
-        : `<table><thead><tr><th>Fecha</th><th>Hora</th><th>Cancha</th><th>Estado</th></tr></thead><tbody>
-            ${proximas.map(r => `<tr>
-              <td>${new Date(r.fecha).toLocaleDateString('es-PE')}</td>
-              <td>${r.hora_inicio?.substring(0,5)}</td>
+      const hoyStr    = fechaStr;
+      const reservasHoy = reservas.filter(r => r.fecha?.substring(0,10) === hoyStr && r.estado !== 'cancelada');
+
+      document.getElementById('cReservasHoy').innerHTML = reservasHoy.length === 0
+        ? '<div class="empty"><div class="empty-icon">📭</div>No tienes reservas para hoy</div>'
+        : `<table><thead><tr><th>Hora</th><th>Cancha</th><th>Estado</th></tr></thead><tbody>
+            ${reservasHoy.map(r => `<tr>
+              <td><strong>${r.hora_inicio?.substring(0,5)}</strong></td>
               <td>${r.cancha_nombre}</td>
               <td>${badge(r.estado)}</td>
             </tr>`).join('')}
            </tbody></table>`;
 
-      const canchas = await api.get('/api/canchas', false);
-      document.getElementById('canchasDisponibles').innerHTML =
+      document.getElementById('cCanchas').innerHTML =
         `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
-          ${canchas.slice(0, 6).map(c => `
-            <div style="padding:8px 10px;border-radius:7px;background:var(--green-light);border:1px solid var(--green-border)">
+          ${canchas.slice(0,6).map(c => `
+            <a href="canchas.html" style="padding:8px 10px;border-radius:7px;background:var(--green-light);border:1px solid var(--green-border);text-decoration:none">
               <div style="font-size:12px;font-weight:600;color:var(--green)">${c.nombre}</div>
-              <div style="font-size:11px;color:var(--green);margin-top:1px">S/ ${parseFloat(c.precio_hora).toFixed(2)}/hr</div>
-            </div>`).join('')}
+              <div style="font-size:11px;color:var(--green)">S/ ${parseFloat(c.precio_hora).toFixed(2)}/hr</div>
+            </a>`).join('')}
          </div>`;
-    } catch (err) { console.error(err); }
+    } catch(err) { console.error('Error cliente:', err); }
   }
 
   function badge(estado) {
-    const map = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray' };
-    return `<span class="badge ${map[estado] || 'badge-gray'}">${estado}</span>`;
-  }
-
-  async function cerrarSesion() {
-    await api.logout();
+    const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray' };
+    return `<span class="badge ${m[estado]||'badge-gray'}">${estado}</span>`;
   }
 </script>
 </body>

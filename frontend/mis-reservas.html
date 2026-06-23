@@ -90,18 +90,20 @@
 <script src="js/sidebar.js"></script>
 <script>
   requireAuth();
+  requireRole('cliente');
   renderSidebar('mis-reservas');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
-
-  const hoy = new Date().toISOString().split('T')[0];
-  document.getElementById('modalFecha').min = hoy;
+  const limiteArchivo = new Date();
+  limiteArchivo.setMonth(limiteArchivo.getMonth() - 6);
 
   let reservas = [];
   let reservaEnEdicion = null;
 
   async function cargar() {
     try {
-      reservas = await api.get('/api/reservas');
+      const todas = await api.get('/api/reservas');
+      // Filtrar automáticamente registros con más de 6 meses de antigüedad
+      reservas = todas.filter(r => new Date(r.fecha) >= limiteArchivo);
       filtrar();
     } catch(err) {
       document.getElementById('tablaReservas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
