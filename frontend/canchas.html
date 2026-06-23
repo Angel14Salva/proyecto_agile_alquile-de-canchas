@@ -128,7 +128,7 @@
   }
 
   function editarCancha(id) {
-    const c = canchas.find(x => x.id === id);
+    const c = todasCanchas.find(x => x.id === id);
     if (!c) return;
     const nombre = prompt('Nombre:', c.nombre);
     if (nombre === null) return;
