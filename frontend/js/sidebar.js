@@ -14,7 +14,7 @@ function renderSidebar(activePage) {
     { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',   roles: ['recepcionista'] },
     { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',            roles: ['recepcionista'] },
     // Gerente
-    { page: 'admin',            href: 'admin.html',             icon: '📊', label: 'Panel de informes',    roles: ['admin'] },
+    { page: 'dashboard',        href: 'dashboard.html',         icon: '📊', label: 'Panel de informes',    roles: ['admin'] },
     { page: 'admin-export',     href: 'admin.html#informes',    icon: '📤', label: 'Exportar informes',    roles: ['admin'] },
     { page: 'admin-usuarios',   href: 'admin.html#usuarios',    icon: '👥', label: 'Gestión de usuarios',  roles: ['admin'] },
   ];
