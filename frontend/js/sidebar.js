@@ -5,7 +5,8 @@ function renderSidebar(activePage) {
   const items = [
     // Cliente
     { page: 'dashboard',        href: 'dashboard.html',         icon: '🏠', label: 'Dashboard',           roles: ['cliente','recepcionista'] },
-    { page: 'canchas',          href: 'canchas.html',           icon: '⚽', label: 'Canchas',              roles: ['cliente','admin'] },
+    { page: 'canchas',          href: 'canchas.html',           icon: '⚽', label: 'Canchas',              roles: ['cliente'] },
+    { page: 'canchas',          href: 'admin.html#canchas',     icon: '⚽', label: 'Canchas',              roles: ['admin'] },
     { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Nueva reserva',        roles: ['cliente','recepcionista'] },
     { page: 'mis-reservas',     href: 'mis-reservas.html',      icon: '📋', label: 'Mis reservas',         roles: ['cliente'] },
     { page: 'reserva-grande',   href: 'reserva-grande.html',    icon: '🏟️', label: 'Reserva grande',      roles: ['cliente','recepcionista'] },
