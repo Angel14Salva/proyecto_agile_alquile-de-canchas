@@ -118,7 +118,11 @@
 
   // Abrir tab según hash en URL (ej: admin.html#usuarios)
 
-  if (_hash) mostrarTab(_hash);
+  if (_hash) {
+    mostrarTab(_hash);
+    const tabsBar = document.querySelector('.tabs');
+    if (tabsBar) tabsBar.style.display = 'none';
+  }
 
   let canchasData = [];
 
