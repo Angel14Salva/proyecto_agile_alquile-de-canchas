@@ -53,7 +53,7 @@ class FlowController {
         currency      : 'CLP',
         amount        : 350,
         email         : r.email,
-        paymentMethod : 11,
+        paymentMethod : 9,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION,
         urlReturn     : process.env.FLOW_URL_RETORNO + '?reserva=' + reserva_id + '&status=success'
       };
