@@ -39,8 +39,12 @@ class AuthController {
 
   async register(req, res) {
     const { nombre, email, password, telefono, dni } = req.body;
-    if (!nombre || !email || !password)
-      return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
+    if (!nombre || !email || !password || !dni)
+      return res.status(400).json({ error: 'Nombre, email, contraseña y DNI son requeridos' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return res.status(400).json({ error: 'Formato de email inválido' });
+    if (!/^[0-9]{8}$/.test(dni))
+      return res.status(400).json({ error: 'El DNI debe tener exactamente 8 dígitos numéricos' });
     if (password.length < 8)
       return res.status(400).json({ error: 'La contraseña debe tener mínimo 8 caracteres' });
     try {
