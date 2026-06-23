@@ -122,6 +122,14 @@
   if (_hash) {
     mostrarTab(_hash);
   }
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash.replace('#','');
+    if (h) {
+      mostrarTab(h);
+      const pm = { usuarios: 'admin-usuarios', informes: 'admin-export', canchas: 'admin' };
+      renderSidebar(pm[h] || 'admin');
+    }
+  });
 
 
 
