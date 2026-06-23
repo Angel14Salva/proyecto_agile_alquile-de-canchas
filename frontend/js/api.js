@@ -15,7 +15,16 @@ const api = {
 
   isLoggedIn: () => !!localStorage.getItem('token'),
 
-  logout: () => {
+  logout: async () => {
+    try {
+      const token = api.getToken();
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+      }
+    } catch { /* si falla el endpoint, seguimos limpiando la sesión local */ }
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
     window.location.href = 'index.html';
