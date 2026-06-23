@@ -51,7 +51,7 @@ class FlowController {
         commerceOrder : 'PSC-' + reserva_id + '-' + Date.now(),
         subject       : 'Reserva ' + r.codigo + ' - Pacific Sport Center',
         currency      : 'CLP',
-        amount        : Math.round(parseFloat(r.precio_hora)),
+        amount        : Math.max(350, Math.round(parseFloat(r.precio_hora) * 35)),
         email         : r.email,
         paymentMethod : 11,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION,
