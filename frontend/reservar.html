@@ -377,17 +377,16 @@
       return;
     }
 
-    const horaFin = `${String(parseInt(slotSeleccionado.split(':')[0]) + 1).padStart(2,'0')}:00`;
     btn.textContent = 'Procesando...';
     btn.disabled    = true;
     alertEl.className = 'alert hidden';
-
     try {
       const reserva = await api.post('/api/reservas', {
         cancha_id:      parseInt(canchaId),
         fecha,
-        hora_inicio:    slotSeleccionado + ':00',
-        hora_fin:       horaFin + ':00',
+        hora_inicio:    horaInicio,
+        hora_fin:       horaFin,
+        precio_hora:    precioHora * (parseInt(horaFin.split(':')[0]) - parseInt(horaInicio.split(':')[0])),
         notas:          notas || null,
         cliente_nombre: nombre,
         cliente_dni:    dni
