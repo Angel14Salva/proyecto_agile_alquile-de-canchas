@@ -93,8 +93,11 @@ class ReservaController {
     const origenFinal = (rol === 'recepcionista' || rol === 'admin') ? 'recepcion' : 'linea';
 
     try {
-      const [ocupado] = await db.query('SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND hora_inicio = ? AND estado != "cancelada"', [cancha_id, fecha, hora_inicio]);
-      if (ocupado.length > 0) return res.status(409).json({ error: 'Ese horario ya esta reservado' });
+      const [ocupado] = await db.query(
+        'SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado != "cancelada" AND hora_inicio < ? AND hora_fin > ?',
+        [cancha_id, fecha, hora_fin, hora_inicio]
+      );
+      if (ocupado.length > 0) return res.status(409).json({ error: 'Ese horario ya esta reservado o se superpone con otra reserva' });
 
       const [cancha] = await db.query('SELECT id, precio_hora FROM canchas WHERE id = ? AND activo = TRUE', [cancha_id]);
       if (cancha.length === 0) return res.status(404).json({ error: 'Cancha no encontrada' });

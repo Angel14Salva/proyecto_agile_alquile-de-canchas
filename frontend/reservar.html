@@ -71,14 +71,22 @@
           <!-- PASO 2: Horario -->
           <div class="card">
             <div class="card-title">2. Seleccionar horario</div>
-            <div style="font-size:12px;color:var(--gray-muted);margin-bottom:8px">
-              🟢 Libre &nbsp; ⬜ Ocupado &nbsp; ✅ Seleccionado
-            </div>
-            <div class="slots-grid" id="slotsGrid">
-              <div style="grid-column:1/-1;text-align:center;color:var(--gray-muted);padding:20px">
-                Selecciona una cancha y fecha
+            <div class="form-row">
+              <div class="form-group">
+                <label>Hora inicio <span style="color:var(--red)">*</span></label>
+                <select id="horaInicio" onchange="actualizarHoraFin();calcularResumen()">
+                  <option value="">-- Selecciona --</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Hora fin <span style="color:var(--red)">*</span></label>
+                <select id="horaFin" onchange="calcularResumen()">
+                  <option value="">-- Selecciona --</option>
+                </select>
               </div>
             </div>
+            <div id="slotsGrid" style="display:none"></div>
+            <div id="horariosOcupados" style="font-size:12px;color:var(--gray-muted);margin-top:8px"></div>
           </div>
         </div>
 
@@ -241,6 +249,20 @@
   }
 
   function renderSlots(slots) {
+    // Llenar selectores de hora inicio con slots disponibles
+    const horas = [];
+    for (let h = 7; h <= 22; h++) horas.push(String(h).padStart(2,'0') + ':00');
+    const ocupadas = (slots||[]).filter(s=>!s.disponible).map(s=>s.hora);
+    const ini = document.getElementById('horaInicio');
+    const fin = document.getElementById('horaFin');
+    ini.innerHTML = '<option value="">-- Selecciona --</option>' + horas.map(h => {
+      const ocp = ocupadas.includes(h);
+      return `<option value="${h}" ${ocp?'disabled style="color:#ccc"':''}>${h}${ocp?' (ocupado)':''}</option>`;
+    }).join('');
+    fin.innerHTML = '<option value="">-- Selecciona --</option>';
+    const div = document.getElementById('horariosOcupados');
+    if (ocupadas.length) div.textContent = '⚠ Ocupado: ' + ocupadas.join(', ');
+    else div.textContent = '✅ Todos los horarios disponibles';
     if (!slots || slots.length === 0) {
       document.getElementById('slotsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--gray-muted);padding:20px">No hay horarios disponibles</div>';
       return;
@@ -253,6 +275,41 @@
     `).join('');
   }
 
+  function actualizarHoraFin() {
+    const ini = document.getElementById('horaInicio').value;
+    const fin = document.getElementById('horaFin');
+    if (!ini) { fin.innerHTML = '<option value="">-- Selecciona --</option>'; return; }
+    const hIni = parseInt(ini.split(':')[0]);
+    const slots = Array.from(document.getElementById('horaInicio').options)
+      .filter(o => o.value && !o.disabled)
+      .map(o => parseInt(o.value.split(':')[0]));
+    fin.innerHTML = '<option value="">-- Selecciona --</option>';
+    for (let h = hIni + 1; h <= 23; h++) {
+      // Parar si hay slot ocupado en el medio
+      const horaStr = String(h).padStart(2,'0') + ':00';
+      const prevOcupado = slots.some ? false : false;
+      fin.innerHTML += `<option value="${horaStr}">${horaStr} (${h - hIni}h — S/ ${((h - hIni) * precioHora).toFixed(2)})</option>`;
+    }
+  }
+  function calcularResumen() {
+    const ini = document.getElementById('horaInicio').value;
+    const fin = document.getElementById('horaFin').value;
+    if (!ini || !fin) { slotSeleccionado = null; validarDatosCliente(); return; }
+    const hIni = parseInt(ini.split(':')[0]);
+    const hFin = parseInt(fin.split(':')[0]);
+    if (hFin <= hIni) { slotSeleccionado = null; validarDatosCliente(); return; }
+    const horas = hFin - hIni;
+    const precio = horas * precioHora;
+    slotSeleccionado = ini;
+    const canchaOpt = document.querySelector('#cancha option[value="' + document.getElementById('cancha').value + '"]');
+    const fecha = document.getElementById('fecha').value;
+    document.getElementById('resumenCancha').textContent = canchaOpt?.textContent || '—';
+    document.getElementById('resumenFechaHora').textContent = `${fecha} · ${ini} a ${fin} · ${horas} hora${horas>1?'s':''}`;
+    document.getElementById('resumenPrecio').textContent = `S/ ${precio.toFixed(2)}`;
+    document.getElementById('cardCliente').style.display = 'block';
+    document.getElementById('cardPago').style.display = 'none';
+    validarDatosCliente();
+  }
   function seleccionarSlot(hora) {
     slotSeleccionado = hora;
     document.querySelectorAll('.slot').forEach(el => {
@@ -267,7 +324,7 @@
 
     document.getElementById('resumenCancha').textContent    = canchaOpt?.textContent || '—';
     document.getElementById('resumenFechaHora').textContent = `${fecha} · ${hora} a ${horaFin} · 1 hora`;
-    document.getElementById('resumenPrecio').textContent    = `S/ ${precioHora.toFixed(2)}`;
+    const hIniOld = parseInt(hora.split(':')[0]); const hFinOld = hIniOld + 1; const precioOld = (hFinOld - hIniOld) * precioHora; document.getElementById('resumenPrecio').textContent = `S/ ${precioOld.toFixed(2)}`;
 
     // Mostrar paso de datos del cliente; ocultar pago hasta validar
     document.getElementById('cardCliente').style.display = 'block';
@@ -302,8 +359,10 @@
     const alertEl  = document.getElementById('alert');
     const btn      = document.getElementById('btnConfirmar');
 
-    if (!canchaId || !fecha || !slotSeleccionado) {
-      alertEl.textContent = 'Selecciona cancha, fecha y horario';
+    const horaInicio = document.getElementById('horaInicio').value;
+    const horaFin    = document.getElementById('horaFin').value;
+    if (!canchaId || !fecha || !horaInicio || !horaFin) {
+      alertEl.textContent = 'Selecciona cancha, fecha, hora inicio y hora fin';
       alertEl.className   = 'alert alert-error';
       return;
     }
