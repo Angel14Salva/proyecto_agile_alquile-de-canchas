@@ -88,6 +88,10 @@
             </select>
           </div>
           <div class="form-group">
+            <label>Email para boleta <span style="font-size:11px;color:var(--gray-muted)">(opcional)</span></label>
+            <input type="email" id="pagoEmailBoleta" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="form-group">
             <label>Notas (opcional)</label>
             <input type="text" id="pagoNotas" placeholder="Observaciones del cobro">
           </div>
@@ -300,7 +304,8 @@
         monto: parseFloat(monto),
         referencia: ref || null,
         tipo_comprobante: document.getElementById('pagoComprobante').value,
-        notas: document.getElementById('pagoNotas').value || null,
+        notas: document.getElementById("pagoNotas").value || null,
+        email_boleta: document.getElementById("pagoEmailBoleta").value || null,
         es_saldo: input.dataset.esSaldo === 'true'
       });
       alerta.textContent='✅ Pago registrado correctamente'; alerta.className='alert alert-success';

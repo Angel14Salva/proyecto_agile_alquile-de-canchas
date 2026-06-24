@@ -69,7 +69,101 @@ async function enviarCancelacionLinea(email, datos) {
   );
 }
 
+
+async function enviarBoletaVenta(email, datos) {
+  const { nombre, codigo, cancha, fecha, horaInicio, horaFin, monto, metodo, referencia, comprobante, numeroComprobante } = datos;
+  const ahora = new Date();
+  const fechaEmision = ahora.toLocaleDateString('es-PE', { year:'numeric', month:'long', day:'numeric' });
+  const horaEmision = ahora.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' });
+  const metodosLabel = { efectivo:'Efectivo', yape:'Yape', plin:'Plin', transferencia:'Transferencia bancaria', tarjeta:'Tarjeta de credito/debito' };
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif">
+<div style="max-width:600px;margin:30px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#1b4332,#2d6a4f);padding:32px 40px;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">⚽</div>
+    <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px">PACIFIC SPORT CENTER</h1>
+    <p style="color:#b7e4c7;margin:4px 0 0;font-size:13px">Complejo Deportivo — Trujillo, Perú</p>
+  </div>
+  <!-- Titulo comprobante -->
+  <div style="background:#52b788;padding:12px 40px;text-align:center">
+    <p style="margin:0;color:#fff;font-weight:700;font-size:15px;letter-spacing:2px">${comprobante === 'factura' ? 'FACTURA DE VENTA' : 'BOLETA DE VENTA'} ELECTRÓNICA</p>
+    <p style="margin:4px 0 0;color:#d8f3dc;font-size:12px">N° ${numeroComprobante || 'PSC-' + Date.now().toString().slice(-6)}</p>
+  </div>
+  <!-- Datos emisor/receptor -->
+  <div style="display:flex;padding:24px 40px;gap:20px;border-bottom:1px solid #e0e0e0">
+    <div style="flex:1">
+      <p style="margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;font-weight:700">Emisor</p>
+      <p style="margin:0;font-weight:700;color:#1b4332">Pacific Sport Center S.A.C.</p>
+      <p style="margin:2px 0;font-size:12px;color:#555">RUC: 20601234567</p>
+      <p style="margin:2px 0;font-size:12px;color:#555">Av. Deportiva 123, Trujillo</p>
+    </div>
+    <div style="flex:1">
+      <p style="margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;font-weight:700">Cliente</p>
+      <p style="margin:0;font-weight:700;color:#333">${nombre}</p>
+      <p style="margin:2px 0;font-size:12px;color:#555">Fecha emisión: ${fechaEmision}</p>
+      <p style="margin:2px 0;font-size:12px;color:#555">Hora: ${horaEmision}</p>
+    </div>
+  </div>
+  <!-- Detalle -->
+  <div style="padding:24px 40px">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f8f9fa">
+          <th style="padding:10px;text-align:left;border-bottom:2px solid #2d6a4f;color:#1b4332">Descripción</th>
+          <th style="padding:10px;text-align:center;border-bottom:2px solid #2d6a4f;color:#1b4332">Fecha</th>
+          <th style="padding:10px;text-align:center;border-bottom:2px solid #2d6a4f;color:#1b4332">Horario</th>
+          <th style="padding:10px;text-align:right;border-bottom:2px solid #2d6a4f;color:#1b4332">Importe</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:12px 10px;color:#333">${cancha}</td>
+          <td style="padding:12px 10px;text-align:center;color:#555">${fecha}</td>
+          <td style="padding:12px 10px;text-align:center;color:#555">${horaInicio} – ${horaFin}</td>
+          <td style="padding:12px 10px;text-align:right;font-weight:700">S/ ${parseFloat(monto).toFixed(2)}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:#f8f9fa">
+          <td colspan="3" style="padding:10px;text-align:right;font-size:12px;color:#888">Subtotal (sin IGV)</td>
+          <td style="padding:10px;text-align:right;font-size:12px">S/ ${(parseFloat(monto)/1.18).toFixed(2)}</td>
+        </tr>
+        <tr style="background:#f8f9fa">
+          <td colspan="3" style="padding:10px;text-align:right;font-size:12px;color:#888">IGV (18%)</td>
+          <td style="padding:10px;text-align:right;font-size:12px">S/ ${(parseFloat(monto) - parseFloat(monto)/1.18).toFixed(2)}</td>
+        </tr>
+        <tr style="background:#2d6a4f">
+          <td colspan="3" style="padding:12px 10px;text-align:right;color:#fff;font-weight:700">TOTAL</td>
+          <td style="padding:12px 10px;text-align:right;color:#fff;font-weight:700;font-size:16px">S/ ${parseFloat(monto).toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <!-- Pago info -->
+  <div style="padding:0 40px 24px">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px">
+      <p style="margin:0 0 8px;font-weight:700;color:#1b4332;font-size:13px">✅ Pago registrado</p>
+      <p style="margin:2px 0;font-size:12px;color:#555">Método: <strong>${metodosLabel[metodo] || metodo}</strong></p>
+      ${referencia ? '<p style="margin:2px 0;font-size:12px;color:#555">N° operación: <strong>' + referencia + '</strong></p>' : ''}
+      <p style="margin:2px 0;font-size:12px;color:#555">Reserva: <strong>${codigo}</strong></p>
+    </div>
+  </div>
+  <!-- Footer -->
+  <div style="background:#1b4332;padding:20px 40px;text-align:center">
+    <p style="margin:0;color:#b7e4c7;font-size:12px">¡Gracias por elegir Pacific Sport Center!</p>
+    <p style="margin:4px 0 0;color:#74c69d;font-size:11px">Este documento es un comprobante electrónico válido</p>
+  </div>
+</div>
+</body>
+</html>`;
+  await enviarEmail(email, (comprobante === 'factura' ? 'Factura' : 'Boleta') + ' de venta - ' + codigo, html);
+}
+
 module.exports = {
   enviarConfirmacionReserva, enviarCancelacionReserva, enviarRecuperacionPassword,
-  enviarConfirmacionPago, enviarCancelacionLinea
+  enviarConfirmacionPago, enviarCancelacionLinea, enviarBoletaVenta
 };

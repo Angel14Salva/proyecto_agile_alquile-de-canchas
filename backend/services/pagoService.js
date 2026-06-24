@@ -3,7 +3,7 @@
 const db = require('../db/connection');
 const { validarRegistroPago } = require('../validators/pagoValidator');
 const comprobanteService = require('./comprobanteService');
-const { enviarConfirmacionPago } = require('./emailService');
+const { enviarConfirmacionPago, enviarBoletaVenta } = require('./emailService');
 
 class PagoService {
   calcularSaldo(precioTotal, montoPagado, tipoPago) {
@@ -105,6 +105,25 @@ class PagoService {
           comprobante: comprobante.numero
         });
       } catch (e) { console.error('Error correo pago:', e.message); }
+      // Enviar boleta si se proporcionó email opcional
+      const emailBoleta = body.email_boleta;
+      if (emailBoleta) {
+        try {
+          await enviarBoletaVenta(emailBoleta, {
+            nombre: reserva.cliente_nombre || reserva.usuario_nombre,
+            codigo: reserva.codigo,
+            cancha: reserva.cancha_nombre || 'Cancha',
+            fecha: reserva.fecha?.substring(0,10),
+            horaInicio: reserva.hora_inicio?.substring(0,5),
+            horaFin: reserva.hora_fin?.substring(0,5),
+            monto: montoFinal,
+            metodo: body.metodo,
+            referencia: body.referencia || null,
+            comprobante: body.comprobante || 'boleta',
+            numeroComprobante: comprobante.numero
+          });
+        } catch (e) { console.error('Error boleta venta:', e.message); }
+      }
 
       return {
         ok: true,
