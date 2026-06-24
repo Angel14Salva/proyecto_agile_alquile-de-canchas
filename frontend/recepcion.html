@@ -399,11 +399,14 @@
   async function cargarPendientes() {
     try {
       const fecha = hoy.toISOString().split('T')[0];
-      const reservas = await api.get(`/api/reservas?fecha=${fecha}&estado=pendiente`);
+      const [reservas, grandesRaw] = await Promise.all([
+        api.get(`/api/reservas?fecha=${fecha}&estado=pendiente`),
+        api.get(`/api/reservas-grandes`).catch(()=>[])
+      ]);
+      const grandes = (Array.isArray(grandesRaw) ? grandesRaw : (grandesRaw.reservas||[])).filter(g => g.estado !== 'cancelada' && parseFloat(g.monto_pagado||0) < parseFloat(g.precio_total||0));
       const div = document.getElementById('pendientesHoy');
-      if (reservas.length===0) { div.innerHTML='<div class="empty"><div class="empty-icon">✅</div>No hay reservas pendientes de pago</div>'; return; }
-      div.innerHTML = `<table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>
-        ${reservas.map(r=>`<tr>
+      if (reservas.length===0 && grandes.length===0) { div.innerHTML='<div class="empty"><div class="empty-icon">✅</div>No hay reservas pendientes de pago</div>'; return; }
+      const filasNormales = reservas.map(r=>`<tr>
           <td>${r.id}</td>
           <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
           <td>${r.cliente_nombre}<br><span style="font-size:11px;color:var(--gray-muted)">${r.cliente_telefono||''}</span></td>
@@ -415,9 +418,27 @@
             <button class="btn-primary btn-sm" onclick="cobrarRapido(${r.id})">Cobrar</button>
             <button class="btn-secondary btn-sm" onclick="modificarRapido('${r.codigo||r.id}')">Editar</button>
           </td>
-        </tr>`).join('')}
-      </tbody></table>`;
+        </tr>`).join('');
+      const filasGrandes = grandes.map(g=>`<tr>
+          <td>${g.id}</td>
+          <td><code style="font-size:11px;background:#e8f5e9;padding:2px 6px;border-radius:4px">${g.codigo||'—'}</code></td>
+          <td>${g.nombre_org}<br><span style="font-size:11px;color:var(--gray-muted)">${g.ruc||''}</span></td>
+          <td>${g.num_canchas} canchas · ${g.turno}</td>
+          <td>${String(g.hora_inicio||'').substring(0,5)} – ${String(g.hora_fin||'').substring(0,5)}</td>
+          <td><strong>S/ ${parseFloat(g.precio_total||0).toFixed(2)}</strong><br><span style="font-size:11px;color:#16a34a">Pagado: S/ ${parseFloat(g.monto_pagado||0).toFixed(2)}</span></td>
+          <td><span class="badge badge-blue">Reserva Grande</span></td>
+          <td style="display:flex;gap:6px">
+            <button class="btn-primary btn-sm" onclick="cobrarGrande('${g.codigo}')">Cobrar</button>
+          </td>
+        </tr>`).join('');
+      div.innerHTML = `<table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>${filasNormales}${filasGrandes}</tbody></table>`;
     } catch(err) { document.getElementById('pendientesHoy').innerHTML=`<p style="color:var(--red)">${err.message}</p>`; }
+  }
+  function cobrarGrande(codigo) {
+    document.getElementById('pagoReservaId').value = codigo;
+    document.getElementById('pagoMonto').value = '';
+    buscarReserva();
+    document.getElementById('pagoReservaId').scrollIntoView({behavior:'smooth'});
   }
 
   function cobrarRapido(id) {
