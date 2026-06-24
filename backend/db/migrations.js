@@ -153,6 +153,13 @@ async function runMigrations() {
       }
     }
   }
+  // Agregar monto_pagado si no existe
+  try {
+    await db.query('ALTER TABLE reservas_grandes ADD COLUMN IF NOT EXISTS monto_pagado DECIMAL(10,2) NOT NULL DEFAULT 0');
+    console.log('[migrations] monto_pagado OK');
+  } catch(e) {
+    console.warn('[migrations] monto_pagado:', e.message);
+  }
   console.log('[migrations] OK');
 }
 
