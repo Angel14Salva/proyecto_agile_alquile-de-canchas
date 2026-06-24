@@ -164,13 +164,13 @@ class ReservaGrandeController {
       const { codigo } = req.params;
       const [rows] = await db.query(
         `SELECT rg.*, u.nombre as cliente_nombre, u.email as cliente_email,
-                GROUP_CONCAT(c.nombre ORDER BY c.id SEPARATOR ', ') as canchas_nombres
+                (SELECT GROUP_CONCAT(c2.nombre ORDER BY c2.id SEPARATOR ', ')
+                 FROM reservas_grandes_canchas rgc2
+                 LEFT JOIN canchas c2 ON rgc2.cancha_id = c2.id
+                 WHERE rgc2.reserva_grande_id = rg.id) as canchas_nombres
          FROM reservas_grandes rg
          LEFT JOIN usuarios u ON rg.usuario_id = u.id
-         LEFT JOIN reservas_grandes_canchas rgc ON rg.id = rgc.reserva_grande_id
-         LEFT JOIN canchas c ON rgc.cancha_id = c.id
-         WHERE rg.codigo = ?
-         GROUP BY rg.id`,
+         WHERE rg.codigo = ?`,
         [codigo]
       );
       if (rows.length === 0) return res.status(404).json({ error: 'Reserva grande no encontrada' });
