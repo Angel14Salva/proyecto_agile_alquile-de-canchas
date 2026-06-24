@@ -2,7 +2,7 @@
 
 function requireAuth() {
   if (!api.isLoggedIn()) {
-    window.location.href = 'index.html';
+    window.location.href = 'login.html';
   }
 }
 

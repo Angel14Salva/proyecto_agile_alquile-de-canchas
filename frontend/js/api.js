@@ -27,7 +27,7 @@ const api = {
     } catch { /* si falla el endpoint, seguimos limpiando la sesión local */ }
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
-    window.location.href = 'index.html';
+    window.location.href = 'login.html';
   },
 
   // ─── Fetch wrapper ────────────────────────────────────────
