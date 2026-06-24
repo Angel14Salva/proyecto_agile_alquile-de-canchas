@@ -183,6 +183,7 @@
         <p style="margin-bottom:10px">
           Se recibió una preparación de reserva grande desde HU-12. Aquí solo se continúa el flujo presencial; no se registró pago automático ni pasarela.
         </p>
+        ${draft.codigo ? `<strong>Código: ${draft.codigo}</strong><br>` : ''}
         <strong>${draft.organizacion}</strong>${draft.ruc ? ` · RUC: ${draft.ruc}` : ''}<br>
         Fecha: ${draft.fecha} · Turno: ${draft.turno.replace('_', ' ')} · ${draft.horas} horas por cancha<br>
         Canchas: ${draft.canchas.map(c => c.nombre).join(', ')}<br>

@@ -158,6 +158,27 @@ class ReservaGrandeController {
     }
   }
 
+
+  async getByCodigo(req, res) {
+    try {
+      const { codigo } = req.params;
+      const [rows] = await db.query(
+        `SELECT rg.*, u.nombre as cliente_nombre, u.email as cliente_email,
+                GROUP_CONCAT(c.nombre ORDER BY c.id SEPARATOR ', ') as canchas_nombres
+         FROM reservas_grandes rg
+         LEFT JOIN usuarios u ON rg.usuario_id = u.id
+         LEFT JOIN reservas_grandes_canchas rgc ON rg.id = rgc.reserva_grande_id
+         LEFT JOIN canchas c ON rgc.cancha_id = c.id
+         WHERE rg.codigo = ?
+         GROUP BY rg.id`,
+        [codigo]
+      );
+      if (rows.length === 0) return res.status(404).json({ error: 'Reserva grande no encontrada' });
+      res.json(rows[0]);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
   async cancel(req, res) {
     const { id } = req.params;
     try {
