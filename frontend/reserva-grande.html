@@ -294,16 +294,32 @@
     document.getElementById('successMsg').classList.remove('hidden');
   }
 
-  function prepararPagoOnline(tipo) {
+  async function prepararPagoOnline(tipo) {
     if (!validarFormularioCompleto()) return;
     const destino = tipo === 'adelanto' ? 'online_adelanto' : 'online_completo';
     const payload = construirPayload(destino);
-    sessionStorage.setItem('reservaGrandeDraft', JSON.stringify(payload));
-    mostrarPasoPreparado(
-      payload,
-      tipo === 'adelanto' ? 'Adelanto preparado' : 'Pago completo preparado',
-      `Se dejó listo el siguiente paso de pago en línea por S/ ${payload.monto_siguiente.toFixed(2)} sin integrar pasarela real.`
-    );
+    try {
+      const bodyBD = {
+        nombre_org: payload.organizacion,
+        ruc: payload.ruc,
+        fecha: payload.fecha,
+        turno: payload.turno,
+        cancha_ids: payload.cancha_ids,
+        notas: payload.notas,
+        origen: 'online'
+      };
+      const res = await api.post('/api/reservas-grandes', bodyBD);
+      const draft = {...payload, id: res.id, codigo: res.codigo};
+      sessionStorage.setItem('reservaGrandeDraft', JSON.stringify(draft));
+      mostrarPasoPreparado(
+        payload,
+        tipo === 'adelanto' ? 'Reserva registrada — Adelanto 50%' : 'Reserva registrada — Pago completo',
+        `Tu reserva ${res.codigo} fue registrada. El pago en línea estará disponible próximamente. Puedes acercarte a caja para pagar con el código ${res.codigo}.`
+      );
+    } catch(e) {
+      const alerta = document.getElementById('alerta');
+      if (alerta) { alerta.textContent = 'Error: ' + (e.message||'intenta de nuevo'); alerta.className = 'alert alert-error'; }
+    }
   }
 
   async function continuarPagoPresencial() {
