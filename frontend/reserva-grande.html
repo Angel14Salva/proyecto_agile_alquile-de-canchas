@@ -306,11 +306,19 @@
     );
   }
 
-  function continuarPagoPresencial() {
+  async function continuarPagoPresencial() {
     if (!validarFormularioCompleto()) return;
     const payload = construirPayload('presencial_hu06');
-    sessionStorage.setItem('reservaGrandeDraft', JSON.stringify(payload));
-    window.location.href = 'recepcion.html?origen=reserva-grande';
+    try {
+      const res = await api.post('/api/reservas-grandes', payload);
+      sessionStorage.setItem('reservaGrandeDraft', JSON.stringify({...payload, id: res.id, codigo: res.codigo}));
+      localStorage.setItem('reservaGrande_borrador', JSON.stringify({...payload, id: res.id, codigo: res.codigo}));
+      window.location.href = 'recepcion.html?origen=reserva-grande';
+    } catch(e) {
+      const alerta = document.getElementById('alerta');
+      if (alerta) { alerta.textContent = 'Error al guardar la reserva: ' + (e.message || 'intenta de nuevo'); alerta.className = 'alert alert-error'; }
+      else alert('Error al guardar la reserva: ' + (e.message || 'intenta de nuevo'));
+    }
   }
 
   let canchasOcupadas = [];
