@@ -37,7 +37,7 @@ class ReservaController {
       if (hasta)     { query += ' AND r.fecha <= ?'; params.push(hasta); }
       if (estado)    { query += ' AND r.estado = ?'; params.push(estado); }
       if (cancha_id) { query += ' AND r.cancha_id = ?'; params.push(cancha_id); }
-      query += ' ORDER BY r.fecha DESC, r.hora_inicio DESC';
+      query += ' ORDER BY r.id ASC';
       const [reservas] = await db.query(query, params);
       reservas.forEach(r => {
         r.cliente_nombre = r.cliente_nombre || r.usuario_nombre;
