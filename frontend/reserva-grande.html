@@ -117,6 +117,34 @@
   let canchas = [];
   let canchasSeleccionadas = [];
 
+  async function buscarRuc(valor) {
+    const status = document.getElementById('ruc-status');
+    const nombreInput = document.getElementById('nombre_org');
+    if (!valor || valor.length < 11) { status.textContent = ''; return; }
+    if (!/^20\d{9}$/.test(valor)) {
+      status.style.color = '#dc2626';
+      status.textContent = '\u26a0 Solo RUC de empresa (empieza con 20)';
+      return;
+    }
+    status.style.color = '#6b7280';
+    status.textContent = '\U0001F50D Buscando...';
+    try {
+      const res = await fetch('/api/ruc/' + valor);
+      const data = await res.json();
+      if (data.ok) {
+        nombreInput.value = data.razon_social;
+        status.style.color = '#16a34a';
+        status.textContent = '\u2705 ' + data.estado;
+      } else {
+        status.style.color = '#dc2626';
+        status.textContent = '\u26a0 RUC no encontrado en SUNAT';
+      }
+    } catch(e) {
+      status.style.color = '#dc2626';
+      status.textContent = '\u26a0 Error al consultar SUNAT';
+    }
+  }
+
   async function cargarCanchas() {
     try {
       canchas = await api.get('/api/canchas', false);
