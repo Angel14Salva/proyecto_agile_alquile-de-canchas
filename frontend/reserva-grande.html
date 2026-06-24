@@ -48,13 +48,13 @@
           <div class="card">
             <div class="card-title">1. Datos de la organización</div>
             <div class="form-group">
-              <label>Nombre de la organización *</label>
-              <input type="text" id="nombre_org" placeholder="Ej: Universidad Nacional de Trujillo">
-            </div>
-            <div class="form-group">
               <label>RUC (opcional)</label>
               <input type="text" id="ruc" placeholder="20123456789" maxlength="11" oninput="buscarRuc(this.value)">
               <small id="ruc-status" style="color:#6b7280;font-size:12px"></small>
+              <label style="margin-top:12px">Nombre de la organización *</label>
+              <input type="text" id="nombre_org" placeholder="Se autocompletará al ingresar RUC">
+            </div>
+            <div class="form-group">
             </div>
             <div class="form-group">
               <label>Notas del evento (opcional)</label>
