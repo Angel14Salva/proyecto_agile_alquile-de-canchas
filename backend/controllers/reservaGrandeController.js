@@ -1,6 +1,6 @@
 'use strict';
 const db = require('../db/connection');
-const { enviarConfirmacionReserva } = require('../services/emailService');
+const { enviarConfirmacionReserva, enviarBoletaVenta } = require('../services/emailService');
 
 class ReservaGrandeController {
 
@@ -177,6 +177,25 @@ class ReservaGrandeController {
         'UPDATE reservas_grandes SET monto_pagado = ?, estado = ? WHERE id = ?',
         [nuevoPagado, estado, id]
       );
+      // Enviar boleta/factura si hay email
+      const emailDest = email_boleta || rg.cliente_email;
+      if (emailDest) {
+        try {
+          await enviarBoletaVenta(emailDest, {
+            nombre: rg.nombre_org,
+            codigo: rg.codigo,
+            cancha: `${rg.num_canchas} canchas (${rg.turno})`,
+            fecha: String(rg.fecha).substring(0,10),
+            horaInicio: rg.hora_inicio,
+            horaFin: rg.hora_fin,
+            monto: nuevo.toFixed(2),
+            metodo,
+            referencia: referencia || '',
+            comprobante: tipo_comprobante || 'boleta',
+            numeroComprobante: rg.codigo
+          });
+        } catch(e) { console.error('Email boleta grande:', e.message); }
+      }
       res.json({ ok: true, message: 'Pago registrado', monto_pagado: nuevoPagado, estado });
     } catch(e) {
       res.status(500).json({ error: e.message });
