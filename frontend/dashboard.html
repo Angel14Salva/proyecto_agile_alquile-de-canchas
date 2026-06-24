@@ -61,7 +61,7 @@
         <div class="grid2" style="margin-bottom:16px">
           <!-- Gráfico de reservas por semana del mes -->
           <div class="card">
-            <div class="card-title">📈 Reservas — semanas del mes</div>
+            <div class="card-title">📈 Reservas por día de la semana (mes actual)</div>
             <div id="graficoSemanas"></div>
           </div>
 
@@ -198,12 +198,16 @@
 
   function renderGraficoDias(porDia) {
     const max = Math.max(...porDia.map(d => d.total), 1);
+    const total = porDia.reduce((s,d)=>s+d.total,0);
     document.getElementById('graficoSemanas').innerHTML =
-      `<div class="sparkline">${porDia.map(d => `
+      `<div style="font-size:11px;color:var(--gray-muted);margin-bottom:6px">Total del mes: <strong>${total} reservas</strong></div>
+       <div class="sparkline">${porDia.map(d => `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center">
-          <div class="spark-bar" style="width:100%;height:${Math.max(6, Math.round((d.total/max)*54))}px" title="${d.total}"></div>
-          <div class="spark-lbl">${d.dia.substring(0,3)}<br>${d.total}</div>
-        </div>`).join('')}</div>`;
+          <div style="font-size:10px;font-weight:600;color:var(--green-dark);margin-bottom:3px">${d.total||''}</div>
+          <div class="spark-bar" style="width:100%;height:${d.total===0?6:Math.max(10,Math.round((d.total/max)*80))}px;background:${d.total===0?'#f0f0f0':'var(--green-light,#dcfce7)'}" title="${d.dia}: ${d.total} reservas"></div>
+          <div class="spark-lbl" style="margin-top:4px">${d.dia.substring(0,3)}</div>
+        </div>`).join('')}</div>
+       ${max===1 && total===0 ? '<div style="text-align:center;color:var(--gray-muted);font-size:12px;margin-top:8px">Sin reservas este mes aún</div>' : ''}`;
   }
 
   function renderRankingApi(ranking) {
