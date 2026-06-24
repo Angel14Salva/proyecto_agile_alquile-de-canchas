@@ -288,10 +288,10 @@
     );
     fin.innerHTML = '<option value="">-- Selecciona --</option>';
     for (let h = hIni + 1; h <= 23; h++) {
-      // Si esta hora esta ocupada, parar — no se puede cruzar una reserva existente
-      if (horasOcupadas.has(h)) break;
       const horaStr = String(h).padStart(2,'0') + ':00';
       fin.innerHTML += `<option value="${horaStr}">${horaStr} (${h - hIni}h — S/ ${((h - hIni) * precioHora).toFixed(2)})</option>`;
+      // Si la SIGUIENTE hora esta ocupada, parar aqui (no se puede reservar mas alla)
+      if (horasOcupadas.has(h + 1) || horasOcupadas.has(h)) break;
     }
   }
   function calcularResumen() {
