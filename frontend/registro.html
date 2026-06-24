@@ -42,7 +42,7 @@
     </form>
 
     <div class="login-links" style="justify-content:center;margin-top:14px">
-      <a href="index.html">← Volver al login</a>
+      <a href="login.html">← Volver al login</a>
     </div>
   </div>
 </div>
@@ -85,7 +85,7 @@
 
       alerta.textContent = '✅ Cuenta creada correctamente. Redirigiendo al inicio de sesión...';
       alerta.className = 'alert alert-success';
-      setTimeout(() => window.location.href = 'index.html?registered=1', 2000);
+      setTimeout(() => window.location.href = 'login.html?registered=1', 2000);
 
     } catch(err) {
       alerta.textContent = err.message;
