@@ -128,7 +128,7 @@
         </div>
         <div>
           <a href="reservar.html"     class="btn-primary">+ Nueva reserva</a>
-          <a href="mis-reservas.html" class="btn-secondary" style="margin-left:8px">Ver historial completo</a>
+          <a href="mis-reservas.html" class="btn-secondary" style="margin-left:8px" id="btnHistorial">Ver historial completo</a>
         </div>
       </div>
 
@@ -144,6 +144,8 @@
   renderSidebar('dashboard');
 
   const usuario = api.getUsuario();
+  const btnHistorial = document.getElementById("btnHistorial");
+  if (btnHistorial && usuario?.rol !== "cliente") btnHistorial.style.display = "none";
   const rol     = usuario?.rol;
   const rolLabel = { admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' };
   const hoy      = new Date();
