@@ -273,7 +273,26 @@
     const info = document.getElementById('infoReserva');
     const resumen = document.getElementById('pagoResumen');
     try {
-      const reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
+      let reserva;
+      if (val.startsWith('RGR-')) {
+        reserva = await api.get('/api/reservas-grandes/codigo/'+val);
+        reservaPago = reserva;
+        reservaPago._esGrande = true;
+        const total = parseFloat(reserva.precio_total||0);
+        const adelanto = total * 0.5;
+        document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
+        document.getElementById('pagoReservaId').dataset.esSaldo = 'false';
+        document.getElementById('pagoReservaId').dataset.esGrande = 'true';
+        info.style.display = 'block'; info.style.color = 'var(--green)';
+        info.textContent = '✅ Reserva Grande · '+reserva.nombre_org+' · '+String(reserva.fecha).substring(0,10);
+        resumen.style.display = 'block';
+        resumen.innerHTML = `<strong>Resumen:</strong> ${reserva.nombre_org} (${reserva.canchas_nombres})<br>Fecha: ${String(reserva.fecha).substring(0,10)} · Turno: ${reserva.turno}<br>Total: S/ ${total.toFixed(2)} · Adelanto 50%: S/ ${adelanto.toFixed(2)}`;
+        if (!document.getElementById('pagoMonto').value) {
+          document.getElementById('pagoMonto').value = adelanto.toFixed(2);
+        }
+        return;
+      }
+      reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
       reservaPago = reserva;
       document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
       document.getElementById('pagoReservaId').dataset.esSaldo = 'false';
