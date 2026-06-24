@@ -280,14 +280,17 @@
     const fin = document.getElementById('horaFin');
     if (!ini) { fin.innerHTML = '<option value="">-- Selecciona --</option>'; return; }
     const hIni = parseInt(ini.split(':')[0]);
-    const slots = Array.from(document.getElementById('horaInicio').options)
-      .filter(o => o.value && !o.disabled)
-      .map(o => parseInt(o.value.split(':')[0]));
+    // Obtener todas las horas ocupadas del selector de inicio
+    const horasOcupadas = new Set(
+      Array.from(document.getElementById('horaInicio').options)
+        .filter(o => o.value && o.disabled)
+        .map(o => parseInt(o.value.split(':')[0]))
+    );
     fin.innerHTML = '<option value="">-- Selecciona --</option>';
     for (let h = hIni + 1; h <= 23; h++) {
-      // Parar si hay slot ocupado en el medio
+      // Si esta hora esta ocupada, parar — no se puede cruzar una reserva existente
+      if (horasOcupadas.has(h)) break;
       const horaStr = String(h).padStart(2,'0') + ':00';
-      const prevOcupado = slots.some ? false : false;
       fin.innerHTML += `<option value="${horaStr}">${horaStr} (${h - hIni}h — S/ ${((h - hIni) * precioHora).toFixed(2)})</option>`;
     }
   }
