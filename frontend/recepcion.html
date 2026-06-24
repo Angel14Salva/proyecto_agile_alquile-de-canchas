@@ -318,16 +318,26 @@
     const reservaId = input.dataset.reservaId || input.value;
     if (!reservaId) { alerta.textContent='Busca primero la reserva'; alerta.className='alert alert-error'; return; }
     try {
-      await api.post('/api/pagos', {
-        reserva_id: parseInt(reservaId, 10),
-        metodo,
-        monto: parseFloat(monto),
-        referencia: ref || null,
-        tipo_comprobante: document.getElementById('pagoComprobante').value,
-        notas: document.getElementById("pagoNotas").value || null,
-        email_boleta: document.getElementById("pagoEmailBoleta").value || null,
-        es_saldo: input.dataset.esSaldo === 'true'
-      });
+      const esGrande = input.dataset.esGrande === 'true';
+      if (esGrande) {
+        await api.post('/api/reservas-grandes/' + parseInt(reservaId, 10) + '/pago', {
+          metodo, monto: parseFloat(monto),
+          referencia: ref || null,
+          tipo_comprobante: document.getElementById('pagoComprobante').value,
+          notas: document.getElementById("pagoNotas").value || null,
+          email_boleta: document.getElementById("pagoEmailBoleta").value || null
+        });
+      } else {
+        await api.post('/api/pagos', {
+          reserva_id: parseInt(reservaId, 10),
+          metodo, monto: parseFloat(monto),
+          referencia: ref || null,
+          tipo_comprobante: document.getElementById('pagoComprobante').value,
+          notas: document.getElementById("pagoNotas").value || null,
+          email_boleta: document.getElementById("pagoEmailBoleta").value || null,
+          es_saldo: input.dataset.esSaldo === 'true'
+        });
+      }
       alerta.textContent='✅ Pago registrado correctamente'; alerta.className='alert alert-success';
       input.value=''; input.dataset.reservaId=''; input.dataset.esSaldo='false';
       document.getElementById('pagoReferencia').value=''; document.getElementById('pagoMonto').value='';

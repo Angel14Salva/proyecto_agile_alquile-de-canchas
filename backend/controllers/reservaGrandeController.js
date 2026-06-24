@@ -159,6 +159,29 @@ class ReservaGrandeController {
   }
 
 
+
+  async registrarPago(req, res) {
+    try {
+      const { id } = req.params;
+      const { metodo, monto, referencia, tipo_comprobante, notas, email_boleta } = req.body;
+      if (!metodo || !monto) return res.status(400).json({ error: 'Metodo y monto requeridos' });
+      const [rows] = await db.query('SELECT * FROM reservas_grandes WHERE id = ?', [id]);
+      if (rows.length === 0) return res.status(404).json({ error: 'Reserva grande no encontrada' });
+      const rg = rows[0];
+      const total = parseFloat(rg.precio_total);
+      const pagado = parseFloat(rg.monto_pagado || 0);
+      const nuevo = parseFloat(monto);
+      const nuevoPagado = pagado + nuevo;
+      const estado = nuevoPagado >= total ? 'confirmada' : rg.estado;
+      await db.query(
+        'UPDATE reservas_grandes SET monto_pagado = ?, estado = ? WHERE id = ?',
+        [nuevoPagado, estado, id]
+      );
+      res.json({ ok: true, message: 'Pago registrado', monto_pagado: nuevoPagado, estado });
+    } catch(e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
   async getByCodigo(req, res) {
     try {
       const { codigo } = req.params;
