@@ -423,10 +423,43 @@
           <td><span class="badge badge-blue">Reserva Grande</span></td>
           <td style="display:flex;gap:6px">
             <button class="btn-primary btn-sm" onclick="cobrarGrande('${g.codigo}')">Cobrar</button>
+            <button class="btn-secondary btn-sm" onclick="editarGrande(${g.id})">Editar</button>
           </td>
         </tr>`).join('');
       div.innerHTML = `<table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>${filasNormales}${filasGrandes}</tbody></table>`;
     } catch(err) { document.getElementById('pendientesHoy').innerHTML=`<p style="color:var(--red)">${err.message}</p>`; }
+  }
+  async function editarGrande(id) {
+    try {
+      const rg = await api.get('/api/reservas-grandes/codigo/' + id).catch(() => null) || await api.get('/api/reservas-grandes').then(list => (Array.isArray(list)?list:(list.reservas||[])).find(r=>r.id==id));
+      if (!rg) { alert('No se pudo cargar la reserva'); return; }
+      document.getElementById('editRgrId').value = rg.id;
+      document.getElementById('editRgrNombre').value = rg.nombre_org || '';
+      document.getElementById('editRgrRuc').value = rg.ruc || '';
+      document.getElementById('editRgrFecha').value = String(rg.fecha).substring(0,10);
+      document.getElementById('editRgrTurno').value = rg.turno || 'dia_completo';
+      document.getElementById('editRgrNotas').value = rg.notas || '';
+      document.getElementById('editRgrAlerta').style.display = 'none';
+      document.getElementById('modalEditarGrande').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+  function cerrarEditarGrande() {
+    document.getElementById('modalEditarGrande').style.display = 'none';
+  }
+  async function guardarEditarGrande() {
+    const id = document.getElementById('editRgrId').value;
+    const alerta = document.getElementById('editRgrAlerta');
+    try {
+      await api.put('/api/reservas-grandes/' + id, {
+        nombre_org: document.getElementById('editRgrNombre').value.trim(),
+        ruc: document.getElementById('editRgrRuc').value.trim() || null,
+        fecha: document.getElementById('editRgrFecha').value,
+        turno: document.getElementById('editRgrTurno').value,
+        notas: document.getElementById('editRgrNotas').value.trim() || null
+      });
+      cerrarEditarGrande();
+      cargarPendientes();
+    } catch(e) { alerta.textContent = e.message; alerta.style.display = 'block'; }
   }
   function cobrarGrande(codigo) {
     document.getElementById('pagoReservaId').value = codigo;
@@ -451,5 +484,30 @@
 
   cargarPendientes();
 </script>
+<div id="modalEditarGrande" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;overflow:auto">
+  <div style="background:white;margin:40px auto;padding:32px;max-width:500px;border-radius:12px">
+    <h3 style="margin:0 0 20px">Editar Reserva Grande</h3>
+    <input type="hidden" id="editRgrId">
+    <label style="display:block;margin-bottom:8px">Nombre organización</label>
+    <input type="text" id="editRgrNombre" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px">
+    <label style="display:block;margin-bottom:8px">RUC</label>
+    <input type="text" id="editRgrRuc" maxlength="11" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px">
+    <label style="display:block;margin-bottom:8px">Fecha</label>
+    <input type="date" id="editRgrFecha" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px">
+    <label style="display:block;margin-bottom:8px">Turno</label>
+    <select id="editRgrTurno" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px">
+      <option value="manana">Mañana (07:00–13:00)</option>
+      <option value="tarde">Tarde (13:00–19:00) — 10% desc.</option>
+      <option value="dia_completo">Día completo (07:00–23:00) — 20% desc.</option>
+    </select>
+    <label style="display:block;margin-bottom:8px">Notas</label>
+    <textarea id="editRgrNotas" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-bottom:20px;height:60px"></textarea>
+    <div id="editRgrAlerta" style="color:red;margin-bottom:12px;display:none"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="cerrarEditarGrande()" style="padding:8px 20px;border:1px solid #ddd;border-radius:6px;cursor:pointer;background:white">Cancelar</button>
+      <button onclick="guardarEditarGrande()" style="padding:8px 20px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">Guardar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

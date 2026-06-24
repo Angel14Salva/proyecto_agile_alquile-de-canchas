@@ -160,6 +160,44 @@ class ReservaGrandeController {
 
 
 
+
+  async update(req, res) {
+    try {
+      const { id } = req.params;
+      const { nombre_org, ruc, fecha, turno, cancha_ids, notas } = req.body;
+      const [rows] = await db.query('SELECT * FROM reservas_grandes WHERE id = ?', [id]);
+      if (rows.length === 0) return res.status(404).json({ error: 'Reserva grande no encontrada' });
+      const turnosValidos = ['manana', 'tarde', 'dia_completo'];
+      if (turno && !turnosValidos.includes(turno)) return res.status(400).json({ error: 'Turno invalido' });
+      const turnos = { manana: { inicio: '07:00', fin: '13:00' }, tarde: { inicio: '13:00', fin: '19:00' }, dia_completo: { inicio: '07:00', fin: '23:00' } };
+      const horas = { manana: 6, tarde: 6, dia_completo: 16 };
+      const descuento = { manana: 0, tarde: 0.10, dia_completo: 0.20 };
+      const t = turno || rows[0].turno;
+      const f = fecha || String(rows[0].fecha).substring(0,10);
+      const { inicio, fin } = turnos[t];
+      // Recalcular precio si cambian canchas o turno
+      let precioTotal = parseFloat(rows[0].precio_total);
+      if (cancha_ids && cancha_ids.length >= 3) {
+        let precioBase = 0;
+        for (const cancha_id of cancha_ids) {
+          const [crow] = await db.query('SELECT precio_hora FROM canchas WHERE id = ?', [cancha_id]);
+          if (crow.length) precioBase += parseFloat(crow[0].precio_hora) * horas[t];
+        }
+        precioTotal = precioBase * (1 - descuento[t]);
+        await db.query('DELETE FROM reservas_grandes_canchas WHERE reserva_grande_id = ?', [id]);
+        for (const cancha_id of cancha_ids) {
+          await db.query('INSERT INTO reservas_grandes_canchas (reserva_grande_id, cancha_id) VALUES (?,?)', [id, cancha_id]);
+        }
+      }
+      await db.query(
+        `UPDATE reservas_grandes SET nombre_org=COALESCE(?,nombre_org), ruc=COALESCE(?,ruc), fecha=COALESCE(?,fecha), turno=COALESCE(?,turno), hora_inicio=?, hora_fin=?, precio_total=?, num_canchas=COALESCE(?,num_canchas), notas=COALESCE(?,notas) WHERE id=?`,
+        [nombre_org||null, ruc||null, fecha||null, turno||null, inicio, fin, precioTotal, cancha_ids?.length||null, notas||null, id]
+      );
+      res.json({ ok: true, message: 'Reserva grande actualizada' });
+    } catch(e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
   async registrarPago(req, res) {
     try {
       const { id } = req.params;
