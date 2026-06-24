@@ -310,7 +310,16 @@
     if (!validarFormularioCompleto()) return;
     const payload = construirPayload('presencial_hu06');
     try {
-      const res = await api.post('/api/reservas-grandes', payload);
+      const bodyBD = {
+        nombre_org: payload.organizacion,
+        ruc: payload.ruc,
+        fecha: payload.fecha,
+        turno: payload.turno,
+        cancha_ids: payload.cancha_ids,
+        notas: payload.notas,
+        origen: 'presencial'
+      };
+      const res = await api.post('/api/reservas-grandes', bodyBD);
       sessionStorage.setItem('reservaGrandeDraft', JSON.stringify({...payload, id: res.id, codigo: res.codigo}));
       localStorage.setItem('reservaGrande_borrador', JSON.stringify({...payload, id: res.id, codigo: res.codigo}));
       window.location.href = 'recepcion.html?origen=reserva-grande';
