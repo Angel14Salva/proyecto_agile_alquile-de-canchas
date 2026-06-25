@@ -114,17 +114,30 @@
     const fin = document.getElementById('modalHoraFin');
     if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
     const hIni = parseInt(ini.split(':')[0]);
+    const duracion = reservaEnEdicion?._duracion || 1;
+    const hFinAuto = hIni + duracion;
     const ocupadas = new Set(
       Array.from(document.getElementById('modalHora').options)
         .filter(o => o.value && o.disabled)
         .map(o => parseInt(o.value.split(':')[0]))
     );
+    // Verificar que el rango no cruza ocupados ni pasa de 23
+    let finValido = hFinAuto;
+    if (finValido > 23) finValido = 23;
+    // Verificar que no hay ocupados en el rango
+    for (let h = hIni + 1; h <= finValido; h++) {
+      if (ocupadas.has(h)) { finValido = h - 1; break; }
+    }
     fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
-    for (let h = hIni + 1; h <= 23; h++) {
+    for (let h = hIni + 1; h <= Math.min(23, hIni + duracion + 3); h++) {
       const str = String(h).padStart(2,'0') + ':00';
       fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
-      if (ocupadas.has(h) || ocupadas.has(h+1)) break;
+      if (ocupadas.has(h)) break;
     }
+    // Autoseleccionar la hora fin calculada
+    const finStr = String(finValido).padStart(2,'0') + ':00';
+    fin.value = finStr;
+    if (!fin.value) fin.value = fin.options[1]?.value || '';
   }
   async function cargar() {
     try {
@@ -189,6 +202,9 @@
     const r = reservas.find(x => x.id === id);
     if (!r) return;
     reservaEnEdicion = r;
+    const hIniOrig = parseInt(r.hora_inicio?.substring(0,5).split(':')[0]);
+    const hFinOrig = parseInt(r.hora_fin?.substring(0,5).split(':')[0]);
+    reservaEnEdicion._duracion = hFinOrig - hIniOrig;
     document.getElementById('modalInfoActual').innerHTML = `
       📋 <strong>${r.codigo||'—'}</strong> · ${r.cancha_nombre}<br>
       📅 Fecha actual: <strong>${r.fecha}</strong> · Hora: <strong>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</strong>`;
