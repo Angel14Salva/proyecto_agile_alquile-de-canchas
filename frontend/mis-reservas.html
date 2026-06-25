@@ -54,30 +54,21 @@
     <div id="modalInfoActual" style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:12px;font-size:13px;margin-bottom:16px"></div>
     <div class="form-group">
       <label>Nueva fecha</label>
-      <input type="date" id="modalFecha">
+      <input type="date" id="modalFecha" onchange="cargarSlotsModal()">
     </div>
     <div class="form-group">
       <label>Nueva hora inicio</label>
-      <select id="modalHora">
+      <select id="modalHora" onchange="actualizarModalHoraFin()">
         <option value="">— Selecciona hora —</option>
-        <option value="07:00">07:00</option>
-        <option value="08:00">08:00</option>
-        <option value="09:00">09:00</option>
-        <option value="10:00">10:00</option>
-        <option value="11:00">11:00</option>
-        <option value="12:00">12:00</option>
-        <option value="13:00">13:00</option>
-        <option value="14:00">14:00</option>
-        <option value="15:00">15:00</option>
-        <option value="16:00">16:00</option>
-        <option value="17:00">17:00</option>
-        <option value="18:00">18:00</option>
-        <option value="19:00">19:00</option>
-        <option value="20:00">20:00</option>
-        <option value="21:00">21:00</option>
-        <option value="22:00">22:00</option>
       </select>
     </div>
+    <div class="form-group">
+      <label>Nueva hora fin</label>
+      <select id="modalHoraFin">
+        <option value="">— Selecciona hora fin —</option>
+      </select>
+    </div>
+    <div id="modalSlotsInfo" style="font-size:12px;color:#666;margin-bottom:8px"></div>
     <div style="display:flex;gap:10px;margin-top:16px">
       <button class="btn-primary" onclick="guardarModificacion()">💾 Guardar cambios</button>
       <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
@@ -129,6 +120,42 @@
       const m = { pagado:'badge-green', pendiente:'badge-amber', reembolsado:'badge-blue' };
       return e ? `<span class="badge ${m[e]||'badge-gray'}">${e}</span>` : '<span class="badge badge-amber">Pendiente</span>';
     };
+    async function cargarSlotsModal() {
+      const fecha = document.getElementById('modalFecha').value;
+      const canchaId = reservaEnEdicion?.cancha_id;
+      if (!fecha || !canchaId) return;
+      try {
+        const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
+        const slots = data.slots || [];
+        const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
+        const ini = document.getElementById('modalHora');
+        ini.innerHTML = '<option value="">— Selecciona hora —</option>';
+        for (let h = 7; h <= 22; h++) {
+          const ocp = ocupadas.has(h);
+          const str = String(h).padStart(2,'0') + ':00';
+          ini.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
+        }
+        document.getElementById('modalSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
+        document.getElementById('modalHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
+      } catch(e) { console.error(e); }
+    }
+    function actualizarModalHoraFin() {
+      const ini = document.getElementById('modalHora').value;
+      const fin = document.getElementById('modalHoraFin');
+      if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
+      const hIni = parseInt(ini.split(':')[0]);
+      const ocupadas = new Set(
+        Array.from(document.getElementById('modalHora').options)
+          .filter(o => o.value && o.disabled)
+          .map(o => parseInt(o.value.split(':')[0]))
+      );
+      fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
+      for (let h = hIni + 1; h <= 23; h++) {
+        const str = String(h).padStart(2,'0') + ':00';
+        fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
+        if (ocupadas.has(h) || ocupadas.has(h+1)) break;
+      }
+    }
     const puedeModificar = (r) => {
       if (r.estado !== 'pendiente' && r.estado !== 'confirmada') return false;
       const fechaStr = r.fecha?.substring(0,10);
@@ -166,7 +193,11 @@
       📋 <strong>${r.codigo||'—'}</strong> · ${r.cancha_nombre}<br>
       📅 Fecha actual: <strong>${r.fecha}</strong> · Hora: <strong>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</strong>`;
     document.getElementById('modalFecha').value = r.fecha;
-    document.getElementById('modalHora').value  = r.hora_inicio?.substring(0,5);
+    document.getElementById('modalFecha').value = r.fecha?.substring(0,10) || '';
+    await cargarSlotsModal();
+    document.getElementById('modalHora').value = r.hora_inicio?.substring(0,5);
+    actualizarModalHoraFin();
+    document.getElementById('modalHoraFin').value = r.hora_fin?.substring(0,5) || '';
     document.getElementById('modalAlert').className = 'alert hidden';
     const modal = document.getElementById('modalModificar');
     modal.style.display = 'flex';
@@ -186,7 +217,8 @@
     const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
     if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
     try {
-      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora });
+      const nuevaHoraFin = document.getElementById('modalHoraFin').value;
+      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora, hora_fin: nuevaHoraFin || undefined });
       cerrarModal();
       const alertMain = document.getElementById('alert');
       alertMain.textContent = '✅ Reserva modificada exitosamente.';
