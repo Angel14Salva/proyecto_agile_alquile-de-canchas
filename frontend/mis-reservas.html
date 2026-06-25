@@ -90,9 +90,9 @@
   let reservas = [];
   let reservaEnEdicion = null;
 
-  async function cargarSlotsModal() {
+  async function cargarSlotsModal(canchaIdOverride) {
     const fecha = document.getElementById('modalFecha').value;
-    const canchaId = reservaEnEdicion?.cancha_id;
+    const canchaId = canchaIdOverride || reservaEnEdicion?.cancha_id;
     if (!fecha || !canchaId) return;
     try {
       const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
@@ -194,7 +194,7 @@
       📅 Fecha actual: <strong>${r.fecha}</strong> · Hora: <strong>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</strong>`;
     document.getElementById('modalFecha').value = r.fecha;
     document.getElementById('modalFecha').value = r.fecha?.substring(0,10) || '';
-    await cargarSlotsModal();
+    await cargarSlotsModal(r.cancha_id);
     document.getElementById('modalHora').value = r.hora_inicio?.substring(0,5);
     actualizarModalHoraFin();
     document.getElementById('modalHoraFin').value = r.hora_fin?.substring(0,5) || '';
