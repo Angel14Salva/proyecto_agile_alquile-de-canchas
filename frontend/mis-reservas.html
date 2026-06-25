@@ -128,16 +128,11 @@
     for (let h = hIni + 1; h <= finValido; h++) {
       if (ocupadas.has(h)) { finValido = h - 1; break; }
     }
+    // Solo mostrar la opcion exacta segun duracion original
     fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
-    for (let h = hIni + 1; h <= Math.min(23, hIni + duracion + 3); h++) {
-      const str = String(h).padStart(2,'0') + ':00';
-      fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
-      if (ocupadas.has(h)) break;
-    }
-    // Autoseleccionar la hora fin calculada
     const finStr = String(finValido).padStart(2,'0') + ':00';
+    fin.innerHTML += `<option value="${finStr}">${finStr} (${finValido - hIni}h)</option>`;
     fin.value = finStr;
-    if (!fin.value) fin.value = fin.options[1]?.value || '';
   }
   async function cargar() {
     try {
