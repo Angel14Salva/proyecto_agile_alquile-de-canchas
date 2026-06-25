@@ -16,6 +16,7 @@ const recepcionRoutes     = require('./routes/recepcion');
 const rucRoutes           = require('./routes/ruc');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 const runMigrations = require('./db/migrations');
+const { iniciarJobCancelacion } = require('./jobs/cancelacionJob');
 
 const app  = express();
 app.set('trust proxy', 1);
