@@ -342,6 +342,42 @@
 
   let reservaEnEdicion = null;
 
+  async function cargarSlotsModificar() {
+    const fecha = document.getElementById('modFecha').value;
+    const canchaId = reservaEnEdicion?.cancha_id;
+    if (!fecha || !canchaId) return;
+    try {
+      const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
+      const slots = data.slots || [];
+      const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
+      const horaIni = document.getElementById('modHora');
+      horaIni.innerHTML = '<option value="">— Selecciona hora —</option>';
+      for (let h = 7; h <= 22; h++) {
+        const ocp = ocupadas.has(h);
+        const str = String(h).padStart(2,'0') + ':00';
+        horaIni.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
+      }
+      document.getElementById('modSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
+      document.getElementById('modHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    } catch(e) { console.error(e); }
+  }
+  function actualizarModHoraFin() {
+    const ini = document.getElementById('modHora').value;
+    const fin = document.getElementById('modHoraFin');
+    if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
+    const hIni = parseInt(ini.split(':')[0]);
+    const ocupadas = new Set(
+      Array.from(document.getElementById('modHora').options)
+        .filter(o => o.value && o.disabled)
+        .map(o => parseInt(o.value.split(':')[0]))
+    );
+    fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    for (let h = hIni + 1; h <= 23; h++) {
+      const str = String(h).padStart(2,'0') + ':00';
+      fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
+      if (ocupadas.has(h) || ocupadas.has(h+1)) break;
+    }
+  }
   async function buscarReservaModificar() {
     const val = document.getElementById('modReservaId').value.trim();
     if (!val) return;
@@ -363,7 +399,11 @@
         📅 Fecha: <strong>${reserva.fecha?.substring(0,10)}</strong> · Hora: <strong>${reserva.hora_inicio?.substring(0,5)} – ${reserva.hora_fin?.substring(0,5)}</strong><br>
         <span class="badge badge-amber" style="margin-top:4px">Estado: ${reserva.estado}</span>`;
       document.getElementById('modFecha').value = reserva.fecha?.substring(0,10);
+      document.getElementById('modFecha').value  = reserva.fecha?.substring(0,10) || '';
+      await cargarSlotsModificar();
       document.getElementById('modHora').value  = reserva.hora_inicio?.substring(0,5);
+      await actualizarModHoraFin();
+      document.getElementById('modHoraFin').value = reserva.hora_fin?.substring(0,5) || '';
       form.style.display='block';
     } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
   }
@@ -377,7 +417,8 @@
     const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
     if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
     try {
-      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora });
+      const nuevaHoraFin = document.getElementById('modHoraFin').value;
+      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora, hora_fin: nuevaHoraFin || undefined });
       alerta.textContent='✅ Reserva modificada exitosamente.'; alerta.className='alert alert-success';
       cancelarModificacion(); cargarPendientes();
     } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
