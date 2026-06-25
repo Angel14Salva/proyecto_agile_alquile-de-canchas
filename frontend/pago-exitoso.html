@@ -29,32 +29,18 @@
     </div>
   </div>
 </div>
-<script src="js/api.js"></script>
 <script>
   const params = new URLSearchParams(window.location.search);
   const reservaId = params.get('reserva');
-  const token = params.get('token');
+  const status = params.get('status');
 
-  async function confirmarPago() {
-    try {
-      const authData = api.getUsuario();
-      if (!authData) { window.location.href = 'login.html'; return; }
-
-      const res = await api.post('/api/pagos/flow/retorno', {
-        token: token,
-        reserva_id: parseInt(reservaId)
-      });
-
-      document.getElementById('loadingMsg').style.display = 'none';
-      document.getElementById('successMsg').style.display = 'block';
-      document.getElementById('codigoReserva').textContent = 'Reserva #' + reservaId;
-    } catch(e) {
-      document.getElementById('loadingMsg').style.display = 'none';
-      document.getElementById('errorMsg').style.display = 'block';
-    }
+  document.getElementById('loadingMsg').style.display = 'none';
+  if (status === 'success' && reservaId) {
+    document.getElementById('successMsg').style.display = 'block';
+    document.getElementById('codigoReserva').textContent = 'Reserva #' + reservaId + ' confirmada';
+  } else {
+    document.getElementById('errorMsg').style.display = 'block';
   }
-
-  confirmarPago();
 </script>
 </body>
 </html>

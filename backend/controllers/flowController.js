@@ -55,7 +55,7 @@ class FlowController {
         email         : r.email,
         paymentMethod : 9,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION,
-        urlReturn     : process.env.FLOW_URL_RETORNO + '?reserva=' + reserva_id + '&status=success'
+        urlReturn     : process.env.BACKEND_URL + '/api/pagos/flow/retorno-web?reserva=' + reserva_id
       };
       const response = await flowPost('payment/create', params);
       const urlPago  = response.url + '?token=' + response.token;
@@ -93,6 +93,31 @@ class FlowController {
     }
   }
 
+
+  async retornoWeb(req, res) {
+    const reserva_id = req.query.reserva || req.body.reserva;
+    const token = req.body.token || req.query.token;
+    const frontendUrl = process.env.FRONTEND_URL || 'https://proyecto-agile-alquile-de-canchas.onrender.com';
+    try {
+      if (!reserva_id) return res.redirect(frontendUrl + '/pago-exitoso.html?status=error');
+      const [pagoExiste] = await db.query('SELECT id FROM pagos WHERE reserva_id = ?', [reserva_id]);
+      if (pagoExiste.length === 0) {
+        const [cancha] = await db.query(
+          'SELECT c.precio_hora FROM reservas r JOIN canchas c ON r.cancha_id = c.id WHERE r.id = ?',
+          [reserva_id]
+        );
+        await db.query(
+          'INSERT INTO pagos (reserva_id, monto, metodo, estado, referencia) VALUES (?, ?, "flow", "pagado", ?)',
+          [reserva_id, cancha[0]?.precio_hora || 0, 'flow-web-' + Date.now()]
+        );
+      }
+      await db.query('UPDATE reservas SET estado = "confirmada" WHERE id = ?', [reserva_id]);
+      res.redirect(frontendUrl + '/pago-exitoso.html?reserva=' + reserva_id + '&status=success');
+    } catch(err) {
+      console.error('Error retornoWeb:', err?.message || err);
+      res.redirect(frontendUrl + '/pago-exitoso.html?status=error');
+    }
+  }
   async retorno(req, res) {
     const { reserva_id } = req.body;
     if (!reserva_id) return res.status(400).json({ error: 'reserva_id requerido' });
