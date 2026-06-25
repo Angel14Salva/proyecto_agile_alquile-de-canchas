@@ -185,6 +185,7 @@
               <td>${badgePago(r.pago_estado)}</td>
               <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
+                ${r.estado === 'pendiente' && (!r.pago_estado || r.pago_estado === 'pendiente') ? `<button class="btn-primary btn-sm" onclick="pagarReserva(${r.id}, ${r.precio_hora})">💳 Pagar</button>` : ''}
                 ${puedeModificar(r) ? `<button class="btn-secondary btn-sm" onclick="abrirModal(${r.id})">✏️ Editar</button>` : ''}
                 ${puedeCancelarLinea(r) ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
               </td>
@@ -238,6 +239,18 @@
     } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
   }
 
+  async function pagarReserva(reservaId, monto) {
+    try {
+      const res = await api.post('/api/pagos/flow/crear', { reserva_id: reservaId });
+      if (res.url) {
+        window.location.href = res.url;
+      } else {
+        alert('Error al iniciar el pago. Intenta de nuevo.');
+      }
+    } catch(e) {
+      alert('Pago en línea no disponible en este momento. Acércate a caja para pagar. \nCódigo: ' + reservaId);
+    }
+  }
   function puedeCancelarLinea(r) {
     if (!['pendiente','confirmada'].includes(r.estado)) return false;
     if (r.estado === 'pendiente_reembolso') return false;
