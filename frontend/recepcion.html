@@ -347,7 +347,7 @@
     const canchaId = reservaEnEdicion?.cancha_id;
     if (!fecha || !canchaId) return;
     try {
-      const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
+      const data = await api.get(`/api/canchas/${canchaId}/disponibilidad?fecha=${fecha}`);
       const slots = data.slots || [];
       const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
       const horaIni = document.getElementById('modHora');
