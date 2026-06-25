@@ -185,7 +185,7 @@
       </table>`;
   }
 
-  function abrirModal(id) {
+  async function abrirModal(id) {
     const r = reservas.find(x => x.id === id);
     if (!r) return;
     reservaEnEdicion = r;
