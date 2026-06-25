@@ -117,6 +117,7 @@
                 <option value="plin">💙 Plin</option>
                 <option value="transferencia">🏦 Transferencia</option>
                 <option value="tarjeta">💳 Tarjeta</option>
+                <option value="efectivo" id="opcionEfectivo" style="display:none">💵 Efectivo en caja</option>
               </select>
             </div>
             <div class="form-group">
@@ -199,6 +200,12 @@
     if (usuario.dni && /^\d{8}$/.test(usuario.dni)) document.getElementById('clienteDni').value = usuario.dni;
   }
 
+  // Mostrar efectivo en caja solo para recepcionista/admin
+  const rolActual = api.getUsuario()?.rol;
+  if (rolActual === 'recepcionista' || rolActual === 'admin') {
+    const opEfectivo = document.getElementById('opcionEfectivo');
+    if (opEfectivo) opEfectivo.style.display = '';
+  }
   async function cargarCanchas() {
     canchas = await api.get('/api/canchas', false);
     filtrarCanchas();
