@@ -90,6 +90,42 @@
   let reservas = [];
   let reservaEnEdicion = null;
 
+  async function cargarSlotsModal() {
+    const fecha = document.getElementById('modalFecha').value;
+    const canchaId = reservaEnEdicion?.cancha_id;
+    if (!fecha || !canchaId) return;
+    try {
+      const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
+      const slots = data.slots || [];
+      const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
+      const ini = document.getElementById('modalHora');
+      ini.innerHTML = '<option value="">— Selecciona hora —</option>';
+      for (let h = 7; h <= 22; h++) {
+        const ocp = ocupadas.has(h);
+        const str = String(h).padStart(2,'0') + ':00';
+        ini.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
+      }
+      document.getElementById('modalSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
+      document.getElementById('modalHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    } catch(e) { console.error(e); }
+  }
+  function actualizarModalHoraFin() {
+    const ini = document.getElementById('modalHora').value;
+    const fin = document.getElementById('modalHoraFin');
+    if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
+    const hIni = parseInt(ini.split(':')[0]);
+    const ocupadas = new Set(
+      Array.from(document.getElementById('modalHora').options)
+        .filter(o => o.value && o.disabled)
+        .map(o => parseInt(o.value.split(':')[0]))
+    );
+    fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    for (let h = hIni + 1; h <= 23; h++) {
+      const str = String(h).padStart(2,'0') + ':00';
+      fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
+      if (ocupadas.has(h) || ocupadas.has(h+1)) break;
+    }
+  }
   async function cargar() {
     try {
       const todas = await api.get('/api/reservas');
@@ -120,42 +156,6 @@
       const m = { pagado:'badge-green', pendiente:'badge-amber', reembolsado:'badge-blue' };
       return e ? `<span class="badge ${m[e]||'badge-gray'}">${e}</span>` : '<span class="badge badge-amber">Pendiente</span>';
     };
-    async function cargarSlotsModal() {
-      const fecha = document.getElementById('modalFecha').value;
-      const canchaId = reservaEnEdicion?.cancha_id;
-      if (!fecha || !canchaId) return;
-      try {
-        const data = await api.get(`/api/reservas/slots?cancha_id=${canchaId}&fecha=${fecha}`);
-        const slots = data.slots || [];
-        const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
-        const ini = document.getElementById('modalHora');
-        ini.innerHTML = '<option value="">— Selecciona hora —</option>';
-        for (let h = 7; h <= 22; h++) {
-          const ocp = ocupadas.has(h);
-          const str = String(h).padStart(2,'0') + ':00';
-          ini.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
-        }
-        document.getElementById('modalSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
-        document.getElementById('modalHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
-      } catch(e) { console.error(e); }
-    }
-    function actualizarModalHoraFin() {
-      const ini = document.getElementById('modalHora').value;
-      const fin = document.getElementById('modalHoraFin');
-      if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
-      const hIni = parseInt(ini.split(':')[0]);
-      const ocupadas = new Set(
-        Array.from(document.getElementById('modalHora').options)
-          .filter(o => o.value && o.disabled)
-          .map(o => parseInt(o.value.split(':')[0]))
-      );
-      fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
-      for (let h = hIni + 1; h <= 23; h++) {
-        const str = String(h).padStart(2,'0') + ':00';
-        fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
-        if (ocupadas.has(h) || ocupadas.has(h+1)) break;
-      }
-    }
     const puedeModificar = (r) => {
       if (r.estado !== 'pendiente' && r.estado !== 'confirmada') return false;
       const fechaStr = r.fecha?.substring(0,10);
