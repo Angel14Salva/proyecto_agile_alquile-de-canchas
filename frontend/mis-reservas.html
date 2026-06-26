@@ -297,7 +297,7 @@
       const resp = await api.post(`/api/reservas/${id}/cancelar-linea`, {});
       alerta.textContent = resp.pendiente_reembolso
         ? '⚠️ Cancelación en revisión — reembolso pendiente de pasarela'
-        : '✅ Reserva cancelada y reembolso procesado';
+        : '✅ Reserva cancelada — Para coordinar tu reembolso contáctanos: 📞 949 123 456 (WhatsApp). Preséntate con tu código de reserva y DNI en recepción. ¡Atendemos de lunes a sábado de 8am a 10pm!';
       alerta.className = resp.pendiente_reembolso ? 'alert alert-error' : 'alert alert-success';
       cargar();
     } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
