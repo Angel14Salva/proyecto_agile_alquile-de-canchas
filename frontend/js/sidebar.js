@@ -31,8 +31,10 @@ function renderSidebar(activePage) {
     btn.className = 'topbar-menu-btn';
     btn.innerHTML = '☰';
     btn.onclick = () => {
-      sidebar.classList.toggle('open');
-      overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+      const isOpen = sidebar.classList.toggle('open');
+      if (window.innerWidth <= 768) {
+        overlay.style.display = isOpen ? 'block' : 'none';
+      }
     };
     topbar.insertBefore(btn, topbar.firstChild);
   }
@@ -44,6 +46,9 @@ function renderSidebar(activePage) {
     overlay.id = 'sidebarOverlay';
     overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199';
     overlay.onclick = () => { sidebar.classList.remove('open'); overlay.style.display='none'; };
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) { overlay.style.display='none'; sidebar.classList.remove('open'); }
+    });
     document.body.appendChild(overlay);
   }
 
