@@ -182,7 +182,10 @@
   async function cargarGerente() {
     try {
       const inicioMes = fechaStr.substring(0,7) + '-01';
-      const data = await api.get(`/api/reportes/dashboard?desde=${inicioMes}&hasta=${fechaStr}`);
+      const hoyObj = new Date();
+      const finMes = new Date(hoyObj.getFullYear(), hoyObj.getMonth()+1, 0);
+      const finMesStr = finMes.getFullYear() + '-' + String(finMes.getMonth()+1).padStart(2,'0') + '-' + String(finMes.getDate()).padStart(2,'0');
+      const data = await api.get(`/api/reportes/dashboard?desde=${inicioMes}&hasta=${finMesStr}`);
 
       document.getElementById('gReservasMes').textContent  = data.metricas.reservas_totales;
       document.getElementById('gIngresosMes').textContent  = `S/ ${data.metricas.ingresos.toFixed(2)}`;
