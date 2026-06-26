@@ -13,10 +13,16 @@
   .bar-fill { height:14px; background:var(--green,#22c55e); border-radius:4px; transition:width .4s; }
   .bar-val  { width:36px; text-align:right; font-weight:600; color:var(--green); }
 
-  .sparkline { display:flex; align-items:flex-end; gap:6px; height:180px; margin-top:12px; padding:0 4px; }
-  .spark-bar { flex:1; background:var(--green-light,#dcfce7); border:1px solid var(--green-border,#bbf7d0); border-radius:6px 6px 0 0; position:relative; min-height:4px; }
-  .spark-bar:hover { background:var(--green,#22c55e); }
-  .spark-lbl { font-size:11px; color:var(--gray-muted); text-align:center; margin-top:4px; font-weight:500; }
+  .chart-wrap { position:relative; margin-top:12px; padding:0 4px; }
+  .chart-grid { position:absolute; top:0; left:0; right:0; bottom:24px; display:flex; flex-direction:column; justify-content:space-between; pointer-events:none; }
+  .chart-grid-line { border-top:1px dashed #e5e7eb; width:100%; position:relative; }
+  .chart-grid-label { position:absolute; left:-28px; top:-8px; font-size:9px; color:#9ca3af; width:24px; text-align:right; }
+  .sparkline { display:flex; align-items:flex-end; gap:6px; height:180px; position:relative; z-index:1; }
+  .spark-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+  .spark-val { font-size:11px; font-weight:700; color:#16a34a; margin-bottom:4px; }
+  .spark-bar { width:100%; background:linear-gradient(180deg,#4ade80,#86efac); border-radius:6px 6px 0 0; position:relative; min-height:4px; transition:all .3s; }
+  .spark-bar:hover { background:linear-gradient(180deg,#16a34a,#4ade80); cursor:pointer; }
+  .spark-lbl { font-size:11px; color:#6b7280; text-align:center; margin-top:5px; font-weight:500; }
 </style>
 </head>
 <body>
@@ -203,15 +209,31 @@
   function renderGraficoDias(porDia) {
     const max = Math.max(...porDia.map(d => d.total), 1);
     const total = porDia.reduce((s,d)=>s+d.total,0);
+    const gridSteps = 4;
+    const stepVal = Math.ceil(max / gridSteps);
+    const gridLines = Array.from({length: gridSteps+1}, (_,i) => stepVal * (gridSteps - i));
     document.getElementById('graficoSemanas').innerHTML =
-      `<div style="font-size:11px;color:var(--gray-muted);margin-bottom:6px">Total del mes: <strong>${total} reservas</strong></div>
-       <div class="sparkline">${porDia.map(d => `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center">
-          <div style="font-size:10px;font-weight:600;color:var(--green-dark);margin-bottom:3px">${d.total||''}</div>
-          <div class="spark-bar" style="width:100%;height:${d.total===0?4:Math.max(12,Math.round((d.total/max)*155))}px;background:${d.total===0?'#f0f0f0':'var(--green-light,#dcfce7)'}" title="${d.dia}: ${d.total} reservas"></div>
-          <div class="spark-lbl" style="margin-top:4px">${d.dia.substring(0,3)}</div>
-        </div>`).join('')}</div>
-       ${max===1 && total===0 ? '<div style="text-align:center;color:var(--gray-muted);font-size:12px;margin-top:8px">Sin reservas este mes aún</div>' : ''}`;
+      `<div style="font-size:11px;color:#6b7280;margin-bottom:8px">Total del mes: <strong style="color:#16a34a">${total} reservas</strong></div>
+       <div class="chart-wrap" style="padding-left:32px">
+         <div class="chart-grid">
+           ${gridLines.map(v => `<div class="chart-grid-line"><span class="chart-grid-label">${v}</span></div>`).join('')}
+         </div>
+         <div class="sparkline">
+           ${porDia.map(d => {
+             const pct = max === 0 ? 0 : Math.round((d.total / max) * 160);
+             const h = d.total === 0 ? 4 : Math.max(10, pct);
+             const bg = d.total === 0 ? 'background:#e5e7eb;' : '';
+             return `<div class="spark-col">
+               <div class="spark-val">${d.total || ''}</div>
+               <div class="spark-bar" style="height:${h}px;${bg}" title="${d.dia}: ${d.total} reservas"></div>
+             </div>`;
+           }).join('')}
+         </div>
+         <div style="display:flex;gap:6px;padding:0 0;margin-top:2px">
+           ${porDia.map(d => `<div class="spark-lbl" style="flex:1">${d.dia.substring(0,3)}</div>`).join('')}
+         </div>
+       </div>
+       ${total===0 ? '<div style="text-align:center;color:#9ca3af;font-size:12px;margin-top:8px">Sin reservas este mes aún</div>' : ''}`;
   }
 
   function renderRankingApi(ranking) {
