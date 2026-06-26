@@ -88,6 +88,13 @@
       font-weight: 500;
     }
 
+    .brand-copy-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .nav-links,
     .nav-actions {
       display: flex;
@@ -98,6 +105,19 @@
     .nav-links a {
       font-size: 14px;
       color: var(--muted);
+    }
+
+    .nav-text {
+      font-size: 14px;
+      color: var(--muted);
+      cursor: default;
+      user-select: text;
+    }
+
+    .header-separator {
+      color: #B8C1B9;
+      cursor: default;
+      user-select: none;
     }
 
     .menu-toggle {
@@ -397,21 +417,28 @@
 <body>
   <header class="topbar">
     <div class="container nav" id="nav">
-      <a class="brand" href="#inicio">
+      <div class="brand">
         <div class="brand-mark">PSC</div>
         <div class="brand-copy">
-          Pacific Sport Center
-          <small>Sistema de reservas de canchas</small>
+          <div class="brand-copy-main">
+            <span>Pacific Sport Center</span>
+            <span class="header-separator">|</span>
+            <small>Sistema de reservas de canchas</small>
+          </div>
         </div>
-      </a>
+      </div>
 
       <nav class="nav-links">
+        <span class="header-separator">|</span>
         <a href="#deportes">Deportes</a>
-        <a href="#contacto">Contacto</a>
+        <span class="header-separator">|</span>
+        <span class="nav-text">Contacto</span>
       </nav>
 
       <div class="nav-actions">
+        <span class="header-separator">|</span>
         <a class="btn btn-secondary" href="/login.html">Iniciar sesión</a>
+        <span class="header-separator">|</span>
         <a class="btn btn-primary" href="/login.html">Reservar ahora</a>
       </div>
 
@@ -494,24 +521,24 @@
       <div class="footer-grid">
         <div>
           <h3>Pacific Sport Center</h3>
-          <p>Sistema de reservas de canchas deportivas para fútbol, básquetbol y vóley.</p>
+          <p>Sistema de reservas de canchas de fútbol, básquet y vóley.</p>
         </div>
 
         <div>
           <h4>Contacto</h4>
           <ul>
-            <li>Teléfono: +51 999 999 999</li>
-            <li>Correo: contacto@pacificsportcenter.pe</li>
-            <li>Ubicación: Av. Deportiva 123, San Miguel</li>
+            <li>+51 999 999 999</li>
+            <li>contacto@pacificsportcenter.pe</li>
+            <li>Calle Sebastián Barranca 231, Trujillo, Perú</li>
           </ul>
         </div>
 
         <div>
           <h4>Redes sociales</h4>
           <ul>
-            <li><a href="#">Facebook</a></li>
-            <li><a href="#">Instagram</a></li>
-            <li><a href="#">TikTok</a></li>
+            <li>Instagram: @PacificSportTrujillo</li>
+            <li>Facebook: Pacific Sport Center Trujillo</li>
+            <li>TikTok: @PacificSportCenter</li>
           </ul>
         </div>
       </div>
