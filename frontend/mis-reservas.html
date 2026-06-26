@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis reservas — Pacific Sport Center</title>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+<div class="app-layout">
+  <header class="topbar">
+    <a href="dashboard.html" class="topbar-logo">
+      <div class="topbar-logo-icon">⚽</div>
+      <span class="topbar-name">Pacific Sport Center</span>
+    </a>
+    <div class="topbar-right">
+      <span class="topbar-user" id="topbarUser"></span>
+      <button class="topbar-btn" onclick="api.logout()">Salir</button>
+    </div>
+  </header>
+  <div class="main-wrap">
+    <nav class="sidebar" id="sidebar"></nav>
+    <main class="content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Mis reservas</div>
+          <div class="page-sub">Historial completo</div>
+        </div>
+        <a href="reservar.html" class="btn-primary">+ Nueva reserva</a>
+      </div>
+      <div id="alert" class="alert hidden"></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">Todas mis reservas</div>
+          <select id="filtroEstado" onchange="filtrar()">
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div id="tablaReservas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL MODIFICAR RESERVA -->
+<div id="modalModificar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:28px;width:100%;max-width:480px;margin:16px">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">✏️ Modificar reserva</div>
+    <div id="modalAlert" class="alert hidden" style="margin-bottom:12px"></div>
+    <div id="modalInfoActual" style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:8px;padding:12px;font-size:13px;margin-bottom:16px"></div>
+    <div class="form-group">
+      <label>Nueva fecha</label>
+      <input type="date" id="modalFecha" onchange="cargarSlotsModal()">
+    </div>
+    <div class="form-group">
+      <label>Nueva hora inicio</label>
+      <select id="modalHora" onchange="actualizarModalHoraFin()">
+        <option value="">— Selecciona hora —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Nueva hora fin</label>
+      <select id="modalHoraFin">
+        <option value="">— Selecciona hora fin —</option>
+      </select>
+    </div>
+    <div id="modalSlotsInfo" style="font-size:12px;color:#666;margin-bottom:8px"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-primary" onclick="guardarModificacion()">💾 Guardar cambios</button>
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/sidebar.js"></script>
+<script>
+  requireAuth();
+  requireRole('cliente');
+  renderSidebar('mis-reservas');
+  document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
+  const limiteArchivo = new Date();
+  limiteArchivo.setMonth(limiteArchivo.getMonth() - 6);
+
+  let reservas = [];
+  let reservaEnEdicion = null;
+
+  async function cargarSlotsModal(canchaIdOverride) {
+    const fecha = document.getElementById('modalFecha').value;
+    const canchaId = canchaIdOverride || reservaEnEdicion?.cancha_id;
+    if (!fecha || !canchaId) return;
+    try {
+      const data = await api.get(`/api/canchas/${canchaId}/disponibilidad?fecha=${fecha}`);
+      const slots = data.slots || [];
+      const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
+      const ini = document.getElementById('modalHora');
+      ini.innerHTML = '<option value="">— Selecciona hora —</option>';
+      for (let h = 7; h <= 22; h++) {
+        const ocp = ocupadas.has(h);
+        const str = String(h).padStart(2,'0') + ':00';
+        ini.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
+      }
+      document.getElementById('modalSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
+      document.getElementById('modalHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    } catch(e) { console.error(e); }
+  }
+  function actualizarModalHoraFin() {
+    const ini = document.getElementById('modalHora').value;
+    const fin = document.getElementById('modalHoraFin');
+    if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
+    const hIni = parseInt(ini.split(':')[0]);
+    const duracion = reservaEnEdicion?._duracion || 1;
+    const hFinAuto = hIni + duracion;
+    const ocupadas = new Set(
+      Array.from(document.getElementById('modalHora').options)
+        .filter(o => o.value && o.disabled)
+        .map(o => parseInt(o.value.split(':')[0]))
+    );
+    // Verificar que el rango no cruza ocupados ni pasa de 23
+    let finValido = hFinAuto;
+    if (finValido > 23) finValido = 23;
+    // Verificar que no hay ocupados en el rango
+    for (let h = hIni + 1; h <= finValido; h++) {
+      if (ocupadas.has(h)) { finValido = h - 1; break; }
+    }
+    // Solo mostrar la opcion exacta segun duracion original
+    fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
+    const finStr = String(finValido).padStart(2,'0') + ':00';
+    fin.innerHTML += `<option value="${finStr}">${finStr} (${finValido - hIni}h)</option>`;
+    fin.value = finStr;
+  }
+  async function cargar() {
+    try {
+      const [todas, grandesRaw] = await Promise.all([
+        api.get('/api/reservas'),
+        api.get('/api/reservas-grandes').catch(()=>[])
+      ]);
+      const grandes = (Array.isArray(grandesRaw) ? grandesRaw : (grandesRaw.reservas||[]));
+      const grandesFormateadas = grandes.map(g => ({
+        id: g.id, codigo: g.codigo,
+        cancha_nombre: g.num_canchas + ' canchas (' + (g.turno||'').replace('_',' ') + ')',
+        fecha: g.fecha, hora_inicio: g.hora_inicio, hora_fin: g.hora_fin,
+        estado: g.estado || 'pendiente',
+        pago_estado: parseFloat(g.monto_pagado||0) > 0 ? 'pagado' : 'pendiente',
+        precio_hora: g.precio_total, _esGrande: true
+      }));
+      // Filtrar automáticamente registros con más de 6 meses de antigüedad
+      reservas = [...todas.filter(r => new Date(r.fecha) >= limiteArchivo), ...grandesFormateadas];
+      filtrar();
+    } catch(err) {
+      document.getElementById('tablaReservas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
+    }
+  }
+
+  function filtrar() {
+    const estado = document.getElementById('filtroEstado').value;
+    const filtradas = estado ? reservas.filter(r => r.estado === estado) : reservas;
+    renderTabla(filtradas);
+  }
+
+  function renderTabla(lista) {
+    if (lista.length === 0) {
+      document.getElementById('tablaReservas').innerHTML = '<div class="empty"><div class="empty-icon">📭</div>No hay reservas</div>';
+      return;
+    }
+    const badgeEstado = (e) => {
+      const m = { confirmada:'badge-green', pendiente:'badge-amber', cancelada:'badge-red', completada:'badge-gray', pendiente_reembolso:'badge-amber' };
+      return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
+    };
+    const badgePago = (e) => {
+      const m = { pagado:'badge-green', pendiente:'badge-amber', reembolsado:'badge-blue' };
+      return e ? `<span class="badge ${m[e]||'badge-gray'}">${e}</span>` : '<span class="badge badge-amber">Pendiente</span>';
+    };
+    const puedeModificar = (r) => {
+      if (r.estado !== 'pendiente' && r.estado !== 'confirmada') return false;
+      const fechaStr = r.fecha?.substring(0,10);
+      const horaStr = r.hora_inicio?.substring(0,5);
+      const fechaHora = new Date(`${fechaStr}T${horaStr}:00`);
+      return (fechaHora - new Date()) / (1000*60*60) >= 2;
+    };
+    document.getElementById('tablaReservas').innerHTML = `
+      <table>
+        <thead><tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Monto</th><th>Acciones</th></tr></thead>
+        <tbody>
+          ${lista.map(r => `
+            <tr>
+              <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
+              <td>${r.cancha_nombre}</td>
+              <td>${r.fecha?.substring(0,10)}</td>
+              <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
+              <td>${badgeEstado(r.estado)}</td>
+              <td>${badgePago(r.pago_estado)}</td>
+              <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap">
+                ${r.estado === 'pendiente' && (!r.pago_estado || r.pago_estado === 'pendiente') ? `<button class="btn-primary btn-sm" onclick="abrirModalPago(${r.id}, ${r.precio_hora}, '${r.codigo}')">💳 Pagar</button>` : ''}
+                ${puedeModificar(r) ? `<button class="btn-secondary btn-sm" onclick="abrirModal(${r.id})">✏️ Editar</button>` : ''}
+                ${puedeCancelarLinea(r) ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function abrirModal(id) {
+    const r = reservas.find(x => x.id === id);
+    if (!r) return;
+    reservaEnEdicion = r;
+    const hIniOrig = parseInt(r.hora_inicio?.substring(0,5).split(':')[0]);
+    const hFinOrig = parseInt(r.hora_fin?.substring(0,5).split(':')[0]);
+    reservaEnEdicion._duracion = hFinOrig - hIniOrig;
+    document.getElementById('modalInfoActual').innerHTML = `
+      📋 <strong>${r.codigo||'—'}</strong> · ${r.cancha_nombre}<br>
+      📅 Fecha actual: <strong>${r.fecha}</strong> · Hora: <strong>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</strong>`;
+    document.getElementById('modalFecha').value = r.fecha;
+    document.getElementById('modalFecha').value = r.fecha?.substring(0,10) || '';
+    await cargarSlotsModal(r.cancha_id);
+    document.getElementById('modalHora').value = r.hora_inicio?.substring(0,5);
+    actualizarModalHoraFin();
+    document.getElementById('modalHoraFin').value = r.hora_fin?.substring(0,5) || '';
+    document.getElementById('modalAlert').className = 'alert hidden';
+    const modal = document.getElementById('modalModificar');
+    modal.style.display = 'flex';
+  }
+
+  function cerrarModal() {
+    document.getElementById('modalModificar').style.display = 'none';
+    reservaEnEdicion = null;
+  }
+
+  async function guardarModificacion() {
+    if (!reservaEnEdicion) return;
+    const nuevaFecha = document.getElementById('modalFecha').value;
+    const nuevaHora  = document.getElementById('modalHora').value;
+    const alerta     = document.getElementById('modalAlert');
+    if (!nuevaFecha || !nuevaHora) { alerta.textContent='⚠️ Selecciona fecha y hora.'; alerta.className='alert alert-error'; return; }
+    const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
+    if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
+    try {
+      const nuevaHoraFin = document.getElementById('modalHoraFin').value;
+      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora, hora_fin: nuevaHoraFin || undefined });
+      cerrarModal();
+      const alertMain = document.getElementById('alert');
+      alertMain.textContent = '✅ Reserva modificada exitosamente.';
+      alertMain.className = 'alert alert-success';
+      cargar();
+    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
+  }
+
+  let _pagoReservaId = null;
+
+  function abrirModalPago(reservaId, monto, codigo) {
+    _pagoReservaId = reservaId;
+    document.getElementById('modalPagoCodigo').textContent = codigo + ' · ' + (document.querySelector(`tr [onclick*="${reservaId}"]`)?.closest('tr')?.querySelector('td:nth-child(2)')?.textContent || '');
+    document.getElementById('modalPagoMonto').textContent = 'S/ ' + parseFloat(monto).toFixed(2);
+    document.getElementById('modalPago').style.display = 'flex';
+  }
+  function cerrarModalPago() {
+    document.getElementById('modalPago').style.display = 'none';
+    _pagoReservaId = null;
+  }
+  async function confirmarPago() {
+    if (!_pagoReservaId) return;
+    cerrarModalPago();
+    await pagarReserva(_pagoReservaId);
+  }
+  async function pagarReserva(reservaId, monto) {
+    try {
+      const res = await api.post('/api/pagos/flow/crear', { reserva_id: reservaId });
+      if (res.url) {
+        window.location.href = res.url;
+      } else {
+        alert('Error al iniciar el pago. Intenta de nuevo.');
+      }
+    } catch(e) {
+      alert('Pago en línea no disponible en este momento. Acércate a caja para pagar. \nCódigo: ' + reservaId);
+    }
+  }
+  function puedeCancelarLinea(r) {
+    if (!['pendiente','confirmada'].includes(r.estado)) return false;
+    if (r.estado === 'pendiente_reembolso') return false;
+    if (r.pago_estado !== 'pagado') return false;
+    const fh = new Date(`${r.fecha?.substring(0,10)}T${r.hora_inicio?.substring(0,5)}:00`);
+    return fh > new Date();
+  }
+
+  async function cancelar(id) {
+    const alerta = document.getElementById('alert');
+    try {
+      const preview = await api.get(`/api/reservas/${id}/cancelar-linea/preview`);
+      const msg = `¿Cancelar reserva ${preview.reserva.codigo}? Reembolso: S/ ${parseFloat(preview.monto_reembolsar).toFixed(2)} (${preview.tipo_pago})`;
+      if (!confirm(msg)) return;
+      const resp = await api.post(`/api/reservas/${id}/cancelar-linea`, {});
+      alerta.textContent = resp.pendiente_reembolso
+        ? '⚠️ Cancelación en revisión — reembolso pendiente de pasarela'
+        : '✅ Reserva cancelada y reembolso procesado';
+      alerta.className = resp.pendiente_reembolso ? 'alert alert-error' : 'alert alert-success';
+      cargar();
+    } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
+  }
+
+  // Cerrar modal al clickear fuera
+  document.getElementById('modalModificar').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
+  });
+
+  cargar();
+</script>
+<div id="modalPago" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:420px;margin:16px;text-align:center">
+    <div style="font-size:40px;margin-bottom:12px">💳</div>
+    <h3 style="margin:0 0 8px;font-size:20px">Pagar reserva</h3>
+    <p id="modalPagoCodigo" style="color:#666;margin-bottom:20px;font-size:14px"></p>
+    <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:20px;text-align:left">
+      <p style="font-weight:700;margin:0 0 10px;font-size:14px">Medios de pago disponibles:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#444">
+        <div>💳 Tarjetas de crédito y débito (Visa, Mastercard)</div>
+        <div>📱 Billeteras electrónicas: Yape, Plin y otras</div>
+        <div>🏪 Banca móvil, agentes y bodegas (PagoEfectivo)</div>
+      </div>
+    </div>
+    <p id="modalPagoMonto" style="font-size:22px;font-weight:700;color:#16a34a;margin-bottom:20px"></p>
+    <div style="display:flex;gap:10px;justify-content:center">
+      <button onclick="cerrarModalPago()" style="padding:10px 24px;border:1px solid #ddd;border-radius:8px;cursor:pointer;background:white;font-weight:600">Cancelar</button>
+      <button onclick="confirmarPago()" style="padding:10px 24px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:15px">Pagar ahora →</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
