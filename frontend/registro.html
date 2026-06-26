@@ -38,6 +38,12 @@
         <label>Teléfono <span style="font-weight:400;color:#888">(opcional)</span></label>
         <input type="text" id="telefono" placeholder="999000000">
       </div>
+      <div style="margin: 12px 0; display:flex; align-items:flex-start; gap:8px;">
+        <input type="checkbox" id="chkTerminos" style="margin-top:3px; cursor:pointer; accent-color:#2d6a4f; width:16px; height:16px; flex-shrink:0;">
+        <label for="chkTerminos" style="font-size:13px; color:#555; cursor:pointer; line-height:1.4;">
+          Acepto los <a href="terminos.html" target="_blank" style="color:#2d6a4f; font-weight:600; text-decoration:underline;">Términos y Condiciones</a> de PacificSportCenter
+        </label>
+      </div>
       <button type="submit" class="btn-primary btn-full" id="btnRegistro">Crear cuenta</button>
     </form>
 
@@ -67,6 +73,11 @@
     alerta.className = 'alert hidden';
 
     if (!nombre)  { alerta.textContent = 'El nombre completo es requerido';       alerta.className = 'alert alert-error'; return; }
+    if (!document.getElementById('chkTerminos').checked) {
+      alerta.textContent = 'Debes aceptar los Términos y Condiciones para continuar';
+      alerta.className = 'alert alert-error';
+      return;
+    }
     if (!dni)     { alerta.textContent = 'El DNI es requerido';                   alerta.className = 'alert alert-error'; return; }
     if (!DNI_RE.test(dni)) { alerta.textContent = 'El DNI debe tener exactamente 8 dígitos numéricos'; alerta.className = 'alert alert-error'; return; }
     if (!email)   { alerta.textContent = 'El correo es requerido';                alerta.className = 'alert alert-error'; return; }
