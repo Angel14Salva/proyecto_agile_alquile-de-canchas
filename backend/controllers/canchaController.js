@@ -100,6 +100,8 @@ class CanchaController {
     const { nombre, deporte, descripcion, capacidad, precio_hora, hora_apertura, hora_cierre } = req.body;
     if (!deporte) return res.status(400).json({ error: 'Deporte es requerido' });
     try {
+      const [duplicado] = await db.query('SELECT id FROM canchas WHERE LOWER(nombre) = LOWER(?)', [nombre]);
+      if (duplicado.length > 0) return res.status(400).json({ error: 'Ya existe una cancha con ese nombre' });
       const [result] = await db.query(
         'INSERT INTO canchas (nombre, deporte, descripcion, capacidad, precio_hora, hora_apertura, hora_cierre) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [nombre, deporte, descripcion || null, capacidad || 10, precio_hora, hora_apertura || '07:00:00', hora_cierre || '23:00:00']
