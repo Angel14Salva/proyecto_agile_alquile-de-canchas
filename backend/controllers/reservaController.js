@@ -82,9 +82,9 @@ class ReservaController {
     if (diffMin < 60 && rol === 'cliente')
       return res.status(400).json({ error: 'No se puede reservar con menos de 1 hora de anticipacion' });
 
-    // Límite: máximo 7 días desde hoy
+    // Límite: máximo 30 días desde hoy
     const limite = new Date(ahora);
-    limite.setDate(limite.getDate() + 7);
+    limite.setDate(limite.getDate() + 30);
     limite.setHours(23, 59, 59, 999);
     if (fechaReserva > limite)
       return res.status(400).json({ error: 'Solo se pueden reservar canchas con hasta 7 días de anticipación' });

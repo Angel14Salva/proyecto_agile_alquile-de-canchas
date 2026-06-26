@@ -178,7 +178,7 @@
   // Fecha mínima = hoy, máxima = hoy + 7 días (usando fecha local, no UTC)
   const hoy = new Date();
   const maxFecha = new Date(hoy);
-  maxFecha.setDate(maxFecha.getDate() + 7);
+  maxFecha.setDate(maxFecha.getDate() + 30);
   const toISO = d => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
