@@ -2,14 +2,1362 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/login.html">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Redirigiendo a inicio de sesión...</title>
+  <title>Pacific Sport Center | Reserva de canchas deportivas</title>
+  <style>
+    :root {
+      --green: #2D7A3A;
+      --green-dark: #1F5A2A;
+      --green-soft: #EAF3DE;
+      --green-border: #C0DD97;
+      --white: #FFFFFF;
+      --bg: #F4F6F3;
+      --surface: #FFFFFF;
+      --text: #1A2E1D;
+      --muted: #6B7A6E;
+      --line: #E2E8DF;
+      --shadow: 0 24px 60px rgba(19, 45, 25, 0.12);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --max: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .container {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .section {
+      padding: 88px 0;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .section-eyebrow {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-dark);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1.1;
+      margin-bottom: 14px;
+    }
+
+    .section-subtitle {
+      max-width: 700px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 20px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: var(--white);
+      box-shadow: 0 12px 24px rgba(45, 122, 58, 0.2);
+    }
+
+    .btn-primary:hover {
+      background: var(--green-dark);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--white);
+      border-color: rgba(255, 255, 255, 0.28);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-light {
+      background: var(--white);
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(18, 50, 25, 0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav {
+      min-height: 74px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 18px;
+    }
+
+    .brand-copy span {
+      display: block;
+      line-height: 1.1;
+    }
+
+    .brand-copy small {
+      color: rgba(255, 255, 255, 0.72);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 14px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .menu-toggle {
+      display: none;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--white);
+      font-size: 20px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 84px 0 72px;
+      background:
+        radial-gradient(circle at top right, rgba(116, 214, 133, 0.22), transparent 30%),
+        linear-gradient(135deg, #143920 0%, #1E5C2B 55%, #2D7A3A 100%);
+      color: var(--white);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -120px -160px auto;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      filter: blur(20px);
+    }
+
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 34px;
+      align-items: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(38px, 6vw, 64px);
+      line-height: 1.02;
+      margin: 18px 0 16px;
+      max-width: 760px;
+    }
+
+    .hero p {
+      max-width: 640px;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 17px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .hero-trust {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .trust-item {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.88);
+    }
+
+    .hero-panel {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: var(--radius-xl);
+      padding: 26px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.16);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-panel h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .hero-panel p {
+      color: rgba(255, 255, 255, 0.76);
+      font-size: 14px;
+    }
+
+    .mini-dashboard {
+      display: grid;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .mini-card {
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    .mini-card small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .mini-card strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .mini-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .mini-tags span {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-dark);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .stats {
+      margin-top: -28px;
+      position: relative;
+      z-index: 3;
+    }
+
+    .stats-grid {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      overflow: hidden;
+    }
+
+    .stat {
+      padding: 22px 24px;
+      border-right: 1px solid var(--line);
+    }
+
+    .stat:last-child {
+      border-right: none;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      color: var(--green-dark);
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .sports-head,
+    .benefits-head,
+    .gallery-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .sports-grid,
+    .benefits-grid,
+    .gallery-grid,
+    .steps-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .sports-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 12px 34px rgba(26, 46, 29, 0.06);
+    }
+
+    .sport-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sport-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, var(--green-dark), #57B867);
+    }
+
+    .sport-icon {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: var(--green-soft);
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+
+    .sport-card h3 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .sport-card p {
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+
+    .sport-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .sport-meta strong {
+      color: var(--green-dark);
+    }
+
+    .price-note {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-dark);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill-list span {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: #F7FAF6;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .how {
+      background:
+        radial-gradient(circle at top left, rgba(45, 122, 58, 0.08), transparent 28%),
+        linear-gradient(180deg, #F8FBF7, #F2F6F1);
+    }
+
+    .steps-grid {
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 30px;
+    }
+
+    .step {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+      min-height: 220px;
+    }
+
+    .step-number {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--green);
+      color: var(--white);
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .step h3 {
+      margin-bottom: 10px;
+      font-size: 19px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .benefits-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .benefit-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .benefit-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--green-soft), #D7EBC7);
+      font-size: 24px;
+    }
+
+    .benefit-card h3 {
+      font-size: 20px;
+    }
+
+    .benefit-card p {
+      color: var(--muted);
+    }
+
+    .filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .filter-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--white);
+      color: var(--muted);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn.active {
+      background: var(--green);
+      color: var(--white);
+      border-color: var(--green);
+    }
+
+    .gallery-grid {
+      grid-template-columns: repeat(3, 1fr);
+      margin-top: 28px;
+    }
+
+    .gallery-card {
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .gallery-media {
+      height: 210px;
+      position: relative;
+      padding: 22px;
+      display: flex;
+      align-items: flex-end;
+      color: var(--white);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .gallery-media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.56));
+    }
+
+    .gallery-media > div {
+      position: relative;
+      z-index: 1;
+    }
+
+    .court-futbol {
+      background-image:
+        linear-gradient(145deg, rgba(10, 50, 16, 0.18), rgba(3, 20, 6, 0.28)),
+        linear-gradient(90deg, transparent 0 47%, rgba(255, 255, 255, 0.4) 47% 53%, transparent 53% 100%),
+        repeating-linear-gradient(
+          0deg,
+          #2E8A40 0 24px,
+          #35964A 24px 48px
+        );
+    }
+
+    .court-basket {
+      background-image:
+        linear-gradient(145deg, rgba(15, 48, 22, 0.18), rgba(2, 20, 6, 0.24)),
+        radial-gradient(circle at center, transparent 0 58px, rgba(255, 255, 255, 0.42) 58px 61px, transparent 61px 100%),
+        linear-gradient(90deg, transparent 0 49.2%, rgba(255, 255, 255, 0.38) 49.2% 50.8%, transparent 50.8% 100%),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px 100%),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 2px, transparent 2px 100%),
+        linear-gradient(135deg, #B96E2D, #D88B44);
+      background-size: auto, auto, auto, 100% 54px, 54px 100%, auto;
+    }
+
+    .court-voley {
+      background-image:
+        linear-gradient(145deg, rgba(15, 54, 25, 0.18), rgba(2, 20, 6, 0.24)),
+        linear-gradient(90deg, transparent 0 49.4%, rgba(255, 255, 255, 0.45) 49.4% 50.6%, transparent 50.6% 100%),
+        linear-gradient(0deg, transparent 0 18%, rgba(255, 255, 255, 0.38) 18% 20%, transparent 20% 80%, rgba(255, 255, 255, 0.38) 80% 82%, transparent 82% 100%),
+        repeating-linear-gradient(
+          90deg,
+          #4CBB67 0 34px,
+          #58C872 34px 68px
+        );
+    }
+
+    .gallery-body {
+      padding: 22px;
+    }
+
+    .gallery-body h3 {
+      margin-bottom: 8px;
+      font-size: 22px;
+    }
+
+    .gallery-body p {
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .gallery-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .cta-band {
+      padding: 88px 0;
+    }
+
+    .cta-card {
+      background: linear-gradient(135deg, #183D22, #2D7A3A);
+      color: var(--white);
+      border-radius: 28px;
+      padding: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .cta-card h2 {
+      font-size: clamp(28px, 3.6vw, 42px);
+      line-height: 1.1;
+      margin-bottom: 10px;
+      max-width: 640px;
+    }
+
+    .cta-card p {
+      color: rgba(255, 255, 255, 0.8);
+      max-width: 620px;
+    }
+
+    .footer {
+      background: #122B18;
+      color: rgba(255, 255, 255, 0.9);
+      padding: 56px 0 30px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr;
+      gap: 22px;
+      margin-bottom: 28px;
+    }
+
+    .footer h3,
+    .footer h4 {
+      margin-bottom: 12px;
+    }
+
+    .footer p,
+    .footer a,
+    .footer li {
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 14px;
+    }
+
+    .footer ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .socials {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .socials a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 92px;
+      min-height: 40px;
+      padding: 0 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hidden-card {
+      display: none;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-grid,
+      .sports-grid,
+      .benefits-grid,
+      .gallery-grid,
+      .steps-grid,
+      .footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .nav-links,
+      .nav-actions {
+        display: none;
+      }
+
+      .menu-toggle {
+        display: inline-grid;
+        place-items: center;
+      }
+
+      .nav.open .nav-links,
+      .nav.open .nav-actions {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .nav.open {
+        flex-wrap: wrap;
+        padding: 14px 0 18px;
+      }
+
+      .hero {
+        padding-top: 58px;
+      }
+
+      .hero-grid,
+      .sports-grid,
+      .benefits-grid,
+      .gallery-grid,
+      .steps-grid,
+      .footer-grid,
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sports-head,
+      .benefits-head,
+      .gallery-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .section {
+        padding: 72px 0;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        width: min(var(--max), calc(100% - 22px));
+      }
+
+      .hero h1 {
+        font-size: 38px;
+      }
+
+      .hero-panel,
+      .card,
+      .step,
+      .cta-card {
+        padding: 22px;
+      }
+
+      .hero-actions,
+      .cta-card .hero-actions {
+        width: 100%;
+      }
+
+      .hero-actions .btn,
+      .cta-card .btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
+  <header class="topbar">
+    <div class="container nav" id="nav">
+      <a class="brand" href="#inicio">
+        <div class="brand-mark">PSC</div>
+        <div class="brand-copy">
+          <span>Pacific Sport Center</span>
+          <small>Reservas de canchas deportivas</small>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#deportes">Deportes</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#beneficios">Beneficios</a>
+        <a href="#canchas">Canchas</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="container hero-grid">
+        <div class="reveal">
+          <div class="eyebrow">Reserva online de fútbol, básquetbol y vóley</div>
+          <h1>Tu próxima cancha te espera en Pacific Sport Center</h1>
+          <p>
+            Organiza partidos, entrenamientos y eventos deportivos con una experiencia de reserva
+            moderna, rápida y clara. Encuentra horarios disponibles, confirma tu pago y recibe tu
+            constancia por correo.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="index.html">Iniciar sesión</a>
+          </div>
+
+          <div class="hero-trust">
+            <div class="trust-item">Atención diaria</div>
+            <div class="trust-item">Confirmación por correo</div>
+            <div class="trust-item">Pago online y en recepción</div>
+          </div>
+        </div>
+
+        <aside class="hero-panel reveal">
+          <h2>Reserva en pocos pasos</h2>
+          <p>Diseñado para clientes, grupos, instituciones y eventos deportivos.</p>
+
+          <div class="mini-dashboard">
+            <div class="mini-card">
+              <small>Deportes disponibles</small>
+              <strong id="sportTitle">Fútbol</strong>
+              <div class="mini-tags">
+                <span id="sportRate">Tarifa competitiva por hora</span>
+                <span id="sportSchedule">Turnos desde la mañana</span>
+              </div>
+            </div>
+
+            <div class="mini-card">
+              <small>Medios de pago</small>
+              <strong>Opciones flexibles para cada reserva</strong>
+              <div class="mini-tags">
+                <span>Efectivo</span>
+                <span>Yape</span>
+                <span>Transferencia</span>
+                <span>Pasarela en línea</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="container">
+        <div class="stats-grid reveal">
+          <div class="stat">
+            <strong>24/7</strong>
+            <span>Solicitud de reservas en línea</span>
+          </div>
+          <div class="stat">
+            <strong>3</strong>
+            <span>Disciplinas listas para reservar</span>
+          </div>
+          <div class="stat">
+            <strong>4</strong>
+            <span>Opciones de pago disponibles</span>
+          </div>
+          <div class="stat">
+            <strong>100%</strong>
+            <span>Confirmación digital con comprobante</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="deportes">
+      <div class="container">
+        <div class="sports-head reveal">
+          <div>
+            <span class="section-eyebrow">Deportes disponibles</span>
+            <h2 class="section-title">Espacios listos para jugar con tarifas competitivas por hora</h2>
+            <p class="section-subtitle">
+              Elige el tipo de cancha ideal según tu partido, entrenamiento o evento. Cada opción
+              mantiene un enfoque práctico, moderno y alineado con la operatividad del sistema.
+            </p>
+          </div>
+        </div>
+
+        <div class="sports-grid">
+          <article class="card sport-card reveal">
+            <div class="sport-icon">⚽</div>
+            <h3>Fútbol</h3>
+            <p>Canchas para partidos entre amigos, academias y encuentros recreativos o competitivos.</p>
+            <div class="sport-meta">
+              <span>Formato recomendado</span>
+              <strong>Tarifa competitiva por hora</strong>
+            </div>
+            <div class="pill-list">
+              <span>Grass sintético</span>
+              <span>Horarios amplios</span>
+              <span>Ideal para grupos</span>
+            </div>
+            <div style="margin-top: 18px;">
+              <span class="price-note">Reserva flexible por bloques horarios</span>
+            </div>
+          </article>
+
+          <article class="card sport-card reveal">
+            <div class="sport-icon">🏀</div>
+            <h3>Básquetbol</h3>
+            <p>Espacios pensados para partidos, entrenamientos y actividades deportivas institucionales.</p>
+            <div class="sport-meta">
+              <span>Uso frecuente</span>
+              <strong>Tarifa competitiva por hora</strong>
+            </div>
+            <div class="pill-list">
+              <span>Cancha multiuso</span>
+              <span>Reserva rápida</span>
+              <span>Turnos programados</span>
+            </div>
+            <div style="margin-top: 18px;">
+              <span class="price-note">Perfecto para equipos y prácticas</span>
+            </div>
+          </article>
+
+          <article class="card sport-card reveal">
+            <div class="sport-icon">🏐</div>
+            <h3>Vóley</h3>
+            <p>Disponibilidad para partidos amateurs, entrenamientos y actividades deportivas grupales.</p>
+            <div class="sport-meta">
+              <span>Experiencia de uso</span>
+              <strong>Tarifa competitiva por hora</strong>
+            </div>
+            <div class="pill-list">
+              <span>Horarios organizados</span>
+              <span>Alta demanda</span>
+              <span>Ideal para eventos</span>
+            </div>
+            <div style="margin-top: 18px;">
+              <span class="price-note">Agenda práctica desde cualquier dispositivo</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section how" id="como-funciona">
+      <div class="container">
+        <div class="reveal">
+          <span class="section-eyebrow">Cómo funciona</span>
+          <h2 class="section-title">Reserva una cancha en cuatro pasos claros</h2>
+          <p class="section-subtitle">
+            El flujo acompaña el proceso real del negocio y comunica al usuario exactamente qué debe
+            hacer desde la elección de la cancha hasta la confirmación final.
+          </p>
+        </div>
+
+        <div class="steps-grid">
+          <article class="step reveal">
+            <div class="step-number">1</div>
+            <h3>Elige cancha y horario</h3>
+            <p>Explora el deporte, revisa disponibilidad y selecciona el turno que mejor se acomode a tu agenda.</p>
+          </article>
+
+          <article class="step reveal">
+            <div class="step-number">2</div>
+            <h3>Reserva en línea o en recepción</h3>
+            <p>Completa la solicitud desde tu celular o coordina la reserva presencialmente con el equipo de atención.</p>
+          </article>
+
+          <article class="step reveal">
+            <div class="step-number">3</div>
+            <h3>Paga como prefieras</h3>
+            <p>Utiliza efectivo, Yape, transferencia o una pasarela de pago en línea según la modalidad de atención.</p>
+          </article>
+
+          <article class="step reveal">
+            <div class="step-number">4</div>
+            <h3>Recibe confirmación por correo</h3>
+            <p>La reserva queda registrada y se envía la confirmación digital para dar seguridad y trazabilidad.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="beneficios">
+      <div class="container">
+        <div class="benefits-head reveal">
+          <div>
+            <span class="section-eyebrow">Beneficios</span>
+            <h2 class="section-title">Más comodidad para clientes, grupos y organizaciones</h2>
+            <p class="section-subtitle">
+              La landing comunica ventajas operativas reales del servicio y refuerza la propuesta del
+              sistema de reservas sin saturar la interfaz.
+            </p>
+          </div>
+        </div>
+
+        <div class="benefits-grid">
+          <article class="card benefit-card reveal">
+            <div class="benefit-icon">🕒</div>
+            <h3>Reserva 24/7 en línea</h3>
+            <p>Consulta disponibilidad y solicita turnos desde cualquier dispositivo, incluso fuera del horario de atención presencial.</p>
+          </article>
+
+          <article class="card benefit-card reveal">
+            <div class="benefit-icon">🏟️</div>
+            <h3>Reservas grandes para eventos o instituciones</h3>
+            <p>Coordina actividades deportivas, campeonatos y necesidades recurrentes con un flujo pensado para grupos amplios.</p>
+          </article>
+
+          <article class="card benefit-card reveal">
+            <div class="benefit-icon">🧾</div>
+            <h3>Comprobante electrónico</h3>
+            <p>Genera boleta o factura según corresponda, manteniendo una experiencia ordenada y profesional para cada cliente.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="canchas">
+      <div class="container">
+        <div class="gallery-head reveal">
+          <div>
+            <span class="section-eyebrow">Galería de canchas</span>
+            <h2 class="section-title">Ambientes deportivos con horarios de atención visibles</h2>
+            <p class="section-subtitle">
+              Esta grilla resume la oferta principal del centro y permite filtrar visualmente por disciplina.
+            </p>
+          </div>
+
+          <div class="filter-tabs" aria-label="Filtrar canchas">
+            <button class="filter-btn active" data-filter="all">Todas</button>
+            <button class="filter-btn" data-filter="futbol">Fútbol</button>
+            <button class="filter-btn" data-filter="basket">Básquetbol</button>
+            <button class="filter-btn" data-filter="voley">Vóley</button>
+          </div>
+        </div>
+
+        <div class="gallery-grid" id="galleryGrid">
+          <article class="card gallery-card reveal" data-sport="futbol">
+            <div class="gallery-media court-futbol">
+              <div>
+                <span class="price-note">Fútbol</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Fútbol A</h3>
+              <p>Espacio ideal para partidos recreativos, entrenamientos y reservas grupales.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Lun a dom | 8:00 a.m. - 11:00 p.m.</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card gallery-card reveal" data-sport="basket">
+            <div class="gallery-media court-basket">
+              <div>
+                <span class="price-note">Básquetbol</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Basket Central</h3>
+              <p>Zona preparada para entrenamientos, encuentros rápidos y actividades institucionales.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Lun a dom | 9:00 a.m. - 10:00 p.m.</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card gallery-card reveal" data-sport="voley">
+            <div class="gallery-media court-voley">
+              <div>
+                <span class="price-note">Vóley</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Vóley Norte</h3>
+              <p>Configuración pensada para partidos amateurs, prácticas y actividades recurrentes.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Lun a dom | 8:00 a.m. - 10:30 p.m.</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card gallery-card reveal" data-sport="futbol">
+            <div class="gallery-media court-futbol">
+              <div>
+                <span class="price-note">Fútbol</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Fútbol B</h3>
+              <p>Alternativa para partidos entre amigos, academias y reservas continuas por bloque.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Lun a dom | 8:00 a.m. - 11:00 p.m.</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card gallery-card reveal" data-sport="basket">
+            <div class="gallery-media court-basket">
+              <div>
+                <span class="price-note">Básquetbol</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Basket Sur</h3>
+              <p>Propuesta enfocada en grupos juveniles, entrenamientos y competencias internas.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Lun a sáb | 9:00 a.m. - 10:00 p.m.</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="card gallery-card reveal" data-sport="voley">
+            <div class="gallery-media court-voley">
+              <div>
+                <span class="price-note">Vóley</span>
+              </div>
+            </div>
+            <div class="gallery-body">
+              <h3>Cancha Vóley Centro</h3>
+              <p>Espacio versátil para clubes, grupos corporativos y actividades deportivas de fin de semana.</p>
+              <div class="gallery-meta">
+                <span>Horario de atención</span>
+                <strong>Mar a dom | 8:30 a.m. - 10:30 p.m.</strong>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-band">
+      <div class="container">
+        <div class="cta-card reveal">
+          <div>
+            <h2>Haz que tu próxima reserva sea más simple, rápida y profesional</h2>
+            <p>
+              Pacific Sport Center centraliza la experiencia de reserva para jugadores, equipos,
+              instituciones y recepcionistas en una propuesta visual moderna y confiable.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer" id="contacto">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h3>Pacific Sport Center</h3>
+          <p>
+            Centro de reservas de canchas deportivas con experiencia enfocada en agilidad,
+            claridad operativa y atención moderna para clientes y organizaciones.
+          </p>
+          <div class="socials">
+            <a href="#">Facebook</a>
+            <a href="#">Instagram</a>
+            <a href="#">TikTok</a>
+          </div>
+        </div>
+
+        <div>
+          <h4>Contacto</h4>
+          <ul>
+            <li>Teléfono: +51 999 999 999</li>
+            <li>Correo: contacto@pacificsportcenter.pe</li>
+            <li>Atención: Lun a dom</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Ubicación</h4>
+          <ul>
+            <li>Av. Deportiva 123</li>
+            <li>San Miguel, Lima</li>
+            <li>Referencia: zona comercial y deportiva</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4>Servicios</h4>
+          <ul>
+            <li>Reservas en línea</li>
+            <li>Reservas en recepción</li>
+            <li>Eventos e instituciones</li>
+            <li>Boleta y factura electrónica</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2026 Pacific Sport Center. Contenido de ejemplo para la landing del sistema.</p>
+        <p>Diseño responsive, deportivo y alineado a la identidad actual del proyecto.</p>
+      </div>
+    </div>
+  </footer>
+
   <script>
-    window.location.replace('/login.html' + window.location.search + window.location.hash);
+    const nav = document.getElementById("nav");
+    const menuToggle = document.getElementById("menuToggle");
+    const filterButtons = document.querySelectorAll(".filter-btn");
+    const galleryCards = document.querySelectorAll(".gallery-card");
+    const sportTitle = document.getElementById("sportTitle");
+    const sportRate = document.getElementById("sportRate");
+    const sportSchedule = document.getElementById("sportSchedule");
+
+    const sportHighlights = {
+      futbol: {
+        title: "Fútbol",
+        rate: "Tarifa competitiva por hora",
+        schedule: "Turnos amplios y reservas grupales"
+      },
+      basket: {
+        title: "Básquetbol",
+        rate: "Horarios prácticos para entrenar",
+        schedule: "Espacio listo para equipos y academias"
+      },
+      voley: {
+        title: "Vóley",
+        rate: "Bloques flexibles para partidos",
+        schedule: "Ideal para grupos y eventos"
+      },
+      all: {
+        title: "Fútbol",
+        rate: "Tarifa competitiva por hora",
+        schedule: "Turnos desde la mañana"
+      }
+    };
+
+    menuToggle.addEventListener("click", () => {
+      nav.classList.toggle("open");
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach((link) => {
+      link.addEventListener("click", () => nav.classList.remove("open"));
+    });
+
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const filter = button.dataset.filter;
+
+        filterButtons.forEach((btn) => btn.classList.remove("active"));
+        button.classList.add("active");
+
+        galleryCards.forEach((card) => {
+          const matches = filter === "all" || card.dataset.sport === filter;
+          card.classList.toggle("hidden-card", !matches);
+        });
+
+        const highlight = sportHighlights[filter] || sportHighlights.all;
+        sportTitle.textContent = highlight.title;
+        sportRate.textContent = highlight.rate;
+        sportSchedule.textContent = highlight.schedule;
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
   </script>
-  <p>Redirigiendo a <a href="/login.html">/login.html</a>...</p>
 </body>
 </html>
