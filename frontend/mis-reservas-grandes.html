@@ -57,7 +57,7 @@
         return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
       };
       const turnos = { manana:'🌅 Mañana', tarde:'🌇 Tarde', dia_completo:'☀️ Día completo' };
-      div.innerHTML = `<table>
+      div.innerHTML = `<div class="table-wrap"><table>
         <thead><tr><th>Código</th><th>Organización</th><th>Fecha</th><th>Turno</th><th>Canchas</th><th>Total</th><th>Estado</th><th>Acción</th></tr></thead>
         <tbody>
           ${reservas.map(r => `<tr>
@@ -71,7 +71,7 @@
             <td>${r.estado === 'pendiente' ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}</td>
           </tr>`).join('')}
         </tbody>
-      </table>`;
+      </table></div>`;
     } catch(err) {
       document.getElementById('tablaReservas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }

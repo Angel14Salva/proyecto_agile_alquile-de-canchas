@@ -467,7 +467,7 @@
             <button class="btn-secondary btn-sm" onclick="editarGrande(${g.id})">Editar</button>
           </td>
         </tr>`).join('');
-      div.innerHTML = `<table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>${filasNormales}${filasGrandes}</tbody></table>`;
+      div.innerHTML = `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>${filasNormales}${filasGrandes}</tbody></table></div>`;
     } catch(err) { document.getElementById('pendientesHoy').innerHTML=`<p style="color:var(--red)">${err.message}</p>`; }
   }
   async function editarGrande(id) {

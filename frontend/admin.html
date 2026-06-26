@@ -183,9 +183,9 @@
       const rows = await api.get('/api/reportes/historial');
       document.getElementById('historialExport').innerHTML = rows.length ? `
         <div class="card-title" style="font-size:13px">Últimos informes</div>
-        <table><thead><tr><th>Archivo</th><th>Formato</th><th>Rango</th><th>Fecha</th></tr></thead>
+        <div class="table-wrap"><table><thead><tr><th>Archivo</th><th>Formato</th><th>Rango</th><th>Fecha</th></tr></thead>
         <tbody>${rows.map(r => `<tr><td>${r.nombre}</td><td>${r.formato}</td><td>${r.desde} – ${r.hasta}</td><td>${new Date(r.created_at).toLocaleString('es-PE')}</td></tr>`).join('')}
-        </tbody></table>` : '<p style="color:var(--gray-muted);font-size:13px">Sin exportaciones previas</p>';
+        </tbody></table></div>` : '<p style="color:var(--gray-muted);font-size:13px">Sin exportaciones previas</p>';
     } catch(err) {
       document.getElementById('historialExport').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
@@ -233,7 +233,7 @@
       const rolLabel = { admin:'Gerente', recepcionista:'Recepcionista', cliente:'Cliente' };
       const badgeRol = { admin:'badge-blue', recepcionista:'badge-amber', cliente:'badge-gray' };
       document.getElementById('listaUsuarios').innerHTML =
-        `<table>
+        `<div class="table-wrap"><table>
           <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
           <tbody>
             ${usuarios.map(u => `<tr>
@@ -244,7 +244,7 @@
               <td><button class="btn-sm ${u.activo?'btn-danger':'btn-primary'}" onclick="toggleUsuario(${u.id}, ${u.activo})">${u.activo?'Desactivar':'Activar'}</button></td>
             </tr>`).join('')}
           </tbody>
-         </table>`;
+         </table></div>`;
     } catch(err) {
       document.getElementById('listaUsuarios').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
@@ -255,7 +255,7 @@
       canchasData = await api.get('/api/canchas/admin/list');
       const iconos = { futbol:'⚽', basketball:'🏀', volleyball:'🏐' };
       document.getElementById('listaCanchas').innerHTML =
-        `<table>
+        `<div class="table-wrap"><table>
           <thead><tr><th>Cancha</th><th>Precio/hr</th><th>Horario</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             ${canchasData.map(c => `<tr id="row-${c.id}">
@@ -283,7 +283,7 @@
               </td>
             </tr>`).join('')}
           </tbody>
-         </table>`;
+         </table></div>`;
     } catch(err) {
       document.getElementById('listaCanchas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }

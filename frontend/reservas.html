@@ -131,7 +131,7 @@
       return `<span class="badge ${m[e]||'badge-gray'}">${e}</span>`;
     };
     document.getElementById('tablaReservas').innerHTML =
-      `<table>
+      `<div class="table-wrap"><table>
         <thead><tr><th>Código</th><th>Cliente</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Origen</th></tr></thead>
         <tbody>
           ${lista.map(r => `<tr>
@@ -148,7 +148,7 @@
               ${r.origen==='linea'?'En línea':'Recepción'}</span></td>
           </tr>`).join('')}
         </tbody>
-       </table>`;
+       </table></div>`;
   }
 
   cargar();

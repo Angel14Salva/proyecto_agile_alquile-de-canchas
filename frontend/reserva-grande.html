@@ -197,7 +197,7 @@
     const { h, desc, precioBase, total, adelanto, horarios } = calculo;
 
     detalle.innerHTML = `
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:13px">
         <tr><td style="padding:6px 0;color:#666">Fecha</td><td><strong>${fecha}</strong></td></tr>
         <tr><td style="padding:6px 0;color:#666">Turno</td><td><strong>${turno.replace('_',' ')} · ${horarios[turno]}</strong></td></tr>
         <tr><td style="padding:6px 0;color:#666">Canchas</td><td><strong>${canchasSeleccionadas.map(c=>c.nombre).join(', ')}</strong></td></tr>
@@ -206,7 +206,7 @@
         <tr><td style="padding:6px 0;color:var(--green)">Descuento (${desc*100}%)</td><td style="color:var(--green)">- S/ ${(precioBase*desc).toFixed(2)}</td></tr>` : ''}
         <tr><td style="padding:6px 0;color:#666;font-size:15px">Total</td><td><strong style="color:var(--green);font-size:18px">S/ ${total.toFixed(2)}</strong></td></tr>
         <tr><td style="padding:6px 0;color:#666">Adelanto 50%</td><td><strong>S/ ${adelanto.toFixed(2)}</strong></td></tr>
-      </table>`;
+      </table></div>`;
 
     renderAccionesPago(calculo);
     resumen.style.display = 'block';

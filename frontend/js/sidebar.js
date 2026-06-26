@@ -23,6 +23,30 @@ function renderSidebar(activePage) {
   const sidebar  = document.getElementById('sidebar');
   if (!sidebar) return;
   const rolLabel = { admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' };
+  // Agregar boton hamburguesa al topbar si no existe
+  const topbar = document.querySelector('.topbar-right') || document.querySelector('.topbar');
+  if (topbar && !document.getElementById('menuHamburguesa')) {
+    const btn = document.createElement('button');
+    btn.id = 'menuHamburguesa';
+    btn.className = 'topbar-menu-btn';
+    btn.innerHTML = '☰';
+    btn.onclick = () => {
+      sidebar.classList.toggle('open');
+      overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+    };
+    topbar.insertBefore(btn, topbar.firstChild);
+  }
+
+  // Overlay para cerrar sidebar al tocar fuera
+  let overlay = document.getElementById('sidebarOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'sidebarOverlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199';
+    overlay.onclick = () => { sidebar.classList.remove('open'); overlay.style.display='none'; };
+    document.body.appendChild(overlay);
+  }
+
   sidebar.innerHTML = `
     <div class="sidebar-section">Menú</div>
     ${visibles.map(i => `

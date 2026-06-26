@@ -229,9 +229,9 @@
         return;
       }
       document.getElementById('controlCaja').innerHTML =
-        `<table><thead><tr><th>Recepcionista</th><th>Efectivo</th><th>Digital</th><th>Total</th></tr></thead><tbody>
+        `<div class="table-wrap"><table><thead><tr><th>Recepcionista</th><th>Efectivo</th><th>Digital</th><th>Total</th></tr></thead><tbody>
           ${caja.map(c => `<tr><td>${c.nombre}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td><strong>S/ ${c.total.toFixed(2)}</strong></td></tr>`).join('')}
-        </tbody></table>`;
+        </tbody></table></div>`;
     } catch(e) { console.error(e); }
   }
 
@@ -290,7 +290,7 @@
       return;
     }
     document.getElementById('controlCaja').innerHTML =
-      `<table>
+      `<div class="table-wrap"><table>
         <thead><tr><th>Recepcionista</th><th>Cobros realizados</th><th>Total recaudado</th></tr></thead>
         <tbody>
           ${filas.map(([nombre,d]) => `
@@ -300,7 +300,7 @@
               <td><strong>S/ ${d.total.toFixed(2)}</strong></td>
             </tr>`).join('')}
         </tbody>
-       </table>`;
+       </table></div>`;
   }
 
   // ── RECEPCIONISTA ────────────────────────────────────────────────────────
@@ -321,13 +321,13 @@
 
       document.getElementById('rTablaReservas').innerHTML = reservas.length === 0
         ? '<div class="empty"><div class="empty-icon">📭</div>No hay reservas para hoy</div>'
-        : `<table><thead><tr><th>Hora</th><th>Cancha</th><th>Cliente</th><th>Estado</th></tr></thead><tbody>
+        : `<div class="table-wrap"><table><thead><tr><th>Hora</th><th>Cancha</th><th>Cliente</th><th>Estado</th></tr></thead><tbody>
             ${reservas.map(r => `<tr>
               <td><strong>${r.hora_inicio?.substring(0,5)}</strong></td>
               <td>${r.cancha_nombre}</td><td>${r.cliente_nombre}</td>
               <td>${badge(r.estado)}</td>
             </tr>`).join('')}
-           </tbody></table>`;
+           </tbody></table></div>`;
 
       document.getElementById('rEstadoCanchas').innerHTML =
         `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
@@ -353,13 +353,13 @@
 
       document.getElementById('cReservasHoy').innerHTML = reservasHoy.length === 0
         ? '<div class="empty"><div class="empty-icon">📭</div>No tienes reservas para hoy</div>'
-        : `<table><thead><tr><th>Hora</th><th>Cancha</th><th>Estado</th></tr></thead><tbody>
+        : `<div class="table-wrap"><table><thead><tr><th>Hora</th><th>Cancha</th><th>Estado</th></tr></thead><tbody>
             ${reservasHoy.map(r => `<tr>
               <td><strong>${r.hora_inicio?.substring(0,5)}</strong></td>
               <td>${r.cancha_nombre}</td>
               <td>${badge(r.estado)}</td>
             </tr>`).join('')}
-           </tbody></table>`;
+           </tbody></table></div>`;
 
       document.getElementById('cCanchas').innerHTML =
         `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">

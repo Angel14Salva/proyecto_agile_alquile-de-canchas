@@ -156,3 +156,92 @@ input:focus, select:focus, textarea:focus { border-color: var(--green); box-shad
 /* ─── EMPTY STATE ────────────────────────── */
 .empty { text-align: center; padding: 40px 20px; color: var(--gray-muted); }
 .empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE — Mobile First
+   ═══════════════════════════════════════════ */
+
+/* Tablets y móviles grandes (≤768px) */
+@media (max-width: 768px) {
+
+  /* Sidebar oculto por defecto en móvil */
+  .sidebar {
+    display: none;
+    position: fixed;
+    top: var(--topbar-h);
+    left: 0;
+    height: calc(100vh - var(--topbar-h));
+    z-index: 200;
+    width: 240px;
+    box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+  }
+  .sidebar.open { display: block; }
+
+  /* Botón hamburguesa en topbar */
+  .topbar-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 18px;
+    margin-right: 8px;
+  }
+
+  .content { padding: 14px; }
+
+  /* Grids a 1 columna */
+  .grid2, .grid3, .grid4, .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Topbar compacto */
+  .topbar { padding: 0 12px; }
+  .topbar-name { font-size: 13px; }
+  .topbar-user { display: none; }
+
+  /* Tablas horizontales con scroll */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 600px; }
+
+  /* Cards padding menor */
+  .card { padding: 12px 14px; }
+
+  /* Page header en columna */
+  .page-header { flex-direction: column; align-items: flex-start; }
+
+  /* Botones full width en móvil */
+  .btn-primary.btn-mobile-full,
+  .btn-secondary.btn-mobile-full { width: 100%; justify-content: center; }
+
+  /* Resumen pago en columna */
+  .resumen-box { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .resumen-box .btn-primary { width: 100%; justify-content: center; }
+
+  /* Slots grid 3 columnas en móvil */
+  .slots-grid { grid-template-columns: repeat(3, 1fr); }
+
+  /* Métricas 2 columnas */
+  .grid4 { grid-template-columns: 1fr 1fr; }
+
+  /* Login card padding menor */
+  .login-card { padding: 24px 20px; }
+}
+
+/* Móviles pequeños (≤480px) */
+@media (max-width: 480px) {
+  .grid4 { grid-template-columns: 1fr 1fr; }
+  .slots-grid { grid-template-columns: repeat(2, 1fr); }
+  .topbar-name { display: none; }
+  .page-title { font-size: 17px; }
+  .metric-val { font-size: 20px; }
+  .card { padding: 10px 12px; }
+  table { min-width: 500px; }
+  .login-card { padding: 20px 16px; }
+}
