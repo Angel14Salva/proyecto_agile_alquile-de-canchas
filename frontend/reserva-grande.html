@@ -37,7 +37,7 @@
           <div style="font-size:13px;color:var(--green);margin-top:6px" id="codigoReserva"></div>
           <div style="font-size:13px;color:var(--green);margin-top:4px" id="resultadoDetalle"></div>
           <div style="margin-top:16px;display:flex;justify-content:center;gap:10px">
-            <a href="reserva-grande.html" class="btn-primary">Nueva simulación</a>
+            <a href="reserva-grande.html" class="btn-primary">Nueva reserva</a>
             <a href="dashboard.html" class="btn-secondary">Ir al dashboard</a>
           </div>
         </div>
@@ -314,7 +314,7 @@
       mostrarPasoPreparado(
         payload,
         tipo === 'adelanto' ? 'Reserva registrada — Adelanto 50%' : 'Reserva registrada — Pago completo',
-        `Tu reserva ${res.codigo} fue registrada. El pago en línea estará disponible próximamente. Puedes acercarte a caja para pagar con el código ${res.codigo}.`
+        `Tu reserva ${res.codigo} fue registrada. Para completar la transacción comunícate al <strong>+51 949 855 580</strong> o acércate a caja con el código ${res.codigo}.`
       );
     } catch(e) {
       const alerta = document.getElementById('alerta');
