@@ -87,10 +87,7 @@
             <button class="btn-primary btn-sm" onclick="exportar('pdf')">📄 Exportar PDF</button>
             <button class="btn-secondary btn-sm" onclick="exportar('excel')">📊 Exportar Excel</button>
           </div>
-          <div class="form-row" style="margin-top:16px">
-            <div class="form-group"><label>Caja inicial del mes (S/)</label><input type="text" id="cajaInicial" oninput="this.value=this.value.replace(/[^\d.]/g,'')"></div>
-            <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn-secondary" onclick="guardarCajaInicial()">Guardar caja inicial</button></div>
-          </div>
+
           <div id="historialExport" style="margin-top:16px"><div class="loading"><span class="spinner"></span>Cargando historial...</div></div>
         </div>
       </div>
