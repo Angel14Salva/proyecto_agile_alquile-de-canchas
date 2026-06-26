@@ -32,11 +32,11 @@
       </div>
       <div class="form-group">
         <label>DNI</label>
-        <input type="text" id="dni" placeholder="12345678" required pattern="[0-9]{8}" maxlength="8" inputmode="numeric">
+        <input type="text" id="dni" placeholder="12345678" required pattern="[0-9]{8}" maxlength="8" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,8)">
       </div>
       <div class="form-group">
         <label>Teléfono <span style="font-weight:400;color:#888">(opcional)</span></label>
-        <input type="text" id="telefono" placeholder="999000000">
+        <input type="text" id="telefono" placeholder="999000000" maxlength="9" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,9); if(this.value.length>0 && this.value[0]!=='9') this.value='9'+this.value.replace(/[^0-9]/g,'').substring(0,8)">
       </div>
       <div style="margin: 12px 0; display:flex; align-items:flex-start; gap:8px;">
         <input type="checkbox" id="chkTerminos" style="margin-top:3px; cursor:pointer; accent-color:#2d6a4f; width:16px; height:16px; flex-shrink:0;">
@@ -73,6 +73,11 @@
     alerta.className = 'alert hidden';
 
     if (!nombre)  { alerta.textContent = 'El nombre completo es requerido';       alerta.className = 'alert alert-error'; return; }
+    if (telefono && !/^9[0-9]{8}$/.test(telefono)) {
+      alerta.textContent = 'El teléfono debe tener 9 dígitos y empezar con 9';
+      alerta.className = 'alert alert-error';
+      return;
+    }
     if (!document.getElementById('chkTerminos').checked) {
       alerta.textContent = 'Debes aceptar los Términos y Condiciones para continuar';
       alerta.className = 'alert alert-error';
