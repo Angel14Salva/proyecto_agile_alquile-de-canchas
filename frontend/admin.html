@@ -238,7 +238,7 @@
               <td style="font-size:12px;color:var(--gray-text)">${u.email}</td>
               <td><span class="badge ${badgeRol[u.rol]||'badge-gray'}">${rolLabel[u.rol]||u.rol}</span></td>
               <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
-              <td><button class="btn-sm ${u.activo?'btn-danger':'btn-primary'}" onclick="toggleUsuario(${u.id}, ${u.activo})">${u.activo?'Desactivar':'Activar'}</button></td>
+              <td>${u.rol === 'admin' ? '<span style="color:#999;font-size:12px">—</span>' : `<button class="btn-sm ${u.activo?'btn-danger':'btn-primary'}" onclick="toggleUsuario(${u.id}, ${u.activo})">${u.activo?'Desactivar':'Activar'}</button>`}</td>
             </tr>`).join('')}
           </tbody>
          </table></div>`;
