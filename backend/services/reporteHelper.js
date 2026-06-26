@@ -22,7 +22,8 @@ function calcularOcupacion(reservasConfirmadas, canchasActivas, diasEnRango) {
 function agruparPorDiaSemana(reservas) {
   const conteo = [0, 0, 0, 0, 0, 0, 0];
   reservas.forEach(r => {
-    const dia = new Date(String(r.fecha).substring(0, 10) + 'T12:00:00').getDay();
+    const fechaStr = r.fecha instanceof Date ? r.fecha.toISOString().substring(0,10) : String(r.fecha).substring(0,10);
+    const dia = new Date(fechaStr + 'T12:00:00').getDay();
     conteo[dia]++;
   });
   return DIAS.map((nombre, i) => ({ dia: nombre, total: conteo[i] }));

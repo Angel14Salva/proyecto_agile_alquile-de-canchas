@@ -154,7 +154,8 @@
   const rol     = usuario?.rol;
   const rolLabel = { admin: 'Gerente', recepcionista: 'Recepcionista', cliente: 'Cliente' };
   const hoy      = new Date();
-  const fechaStr = hoy.toISOString().split('T')[0];
+  // Usar fecha local (no UTC) para evitar desfase de zona horaria
+  const fechaStr = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
 
   document.getElementById('topbarUser').textContent =
     `👤 ${usuario.nombre} (${rolLabel[rol] || rol})`;
