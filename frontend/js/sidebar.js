@@ -9,7 +9,7 @@ function renderSidebar(activePage) {
     { page: 'canchas',          href: 'admin.html#canchas',     icon: '⚽', label: 'Canchas',              roles: ['admin'] },
     { page: 'reservar',         href: 'reservar.html',          icon: '📅', label: 'Nueva reserva',        roles: ['cliente','recepcionista'] },
     { page: 'mis-reservas',     href: 'mis-reservas.html',      icon: '📋', label: 'Mis reservas',         roles: ['cliente'] },
-    { page: 'reserva-grande',   href: 'reserva-grande.html',    icon: '🏟️', label: 'Reserva grande',      roles: ['cliente','recepcionista'] },
+    { page: 'reserva-grande',   href: '#',    icon: '🏟️', label: 'Reserva grande',      roles: ['cliente','recepcionista'], proximamente: true },
     { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',     roles: ['recepcionista'] },
     // Recepcionista
     { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',   roles: ['recepcionista'] },
@@ -54,7 +54,11 @@ function renderSidebar(activePage) {
 
   sidebar.innerHTML = `
     <div class="sidebar-section">Menú</div>
-    ${visibles.map(i => `
+    ${visibles.map(i => i.proximamente ? `
+      <a href="#" class="sidebar-item" onclick="event.preventDefault();alert('🚧 Próximamente\n\nLas reservas grandes serán implementadas en una versión futura del sistema.')">
+        <span class="icon">${i.icon}</span>${i.label} <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:8px;margin-left:4px">Pronto</span>
+      </a>
+    ` : `
       <a href="${i.href}" class="sidebar-item ${activePage === i.page ? 'active' : ''}">
         <span class="icon">${i.icon}</span>${i.label}
       </a>
