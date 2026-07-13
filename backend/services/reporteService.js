@@ -67,24 +67,48 @@ class ReporteService {
     const [movimientos] = await db.query(sqlMov, paramsMov);
 
     let sqlTurnos = `
-      SELECT ct.id, ct.estado, ct.monto_inicial, ct.efectivo_esperado, ur.nombre AS recepcionista_nombre
+      SELECT ct.id, ct.estado, ct.monto_inicial, ct.detalle_metodos, ur.nombre AS recepcionista_nombre
       FROM caja_turnos ct
       JOIN usuarios ur ON ct.abierta_por = ur.id
       WHERE DATE(ct.abierta_at) BETWEEN ? AND ?`;
     const paramsTurnos = [desde, hasta];
     if (recepcionistaId) { sqlTurnos += ' AND ct.abierta_por = ?'; paramsTurnos.push(recepcionistaId); }
-    const [turnos] = await db.query(sqlTurnos, paramsTurnos);
+    const [turnosRaw] = await db.query(sqlTurnos, paramsTurnos);
 
-    // Turnos aun abiertos: el "esperado" todavia no esta guardado (se calcula
-    // recien al cerrar), asi que se estima en vivo con lo cobrado hasta ahora.
-    for (const t of turnos) {
-      if (t.estado === 'abierta') {
-        const [rows] = await db.query(
-          `SELECT COALESCE(SUM(monto),0) AS total FROM pagos_movimientos WHERE caja_turno_id = ? AND metodo = 'efectivo'`,
-          [t.id]
-        );
-        t.efectivo_esperado = parseFloat(t.monto_inicial) + parseFloat(rows[0].total);
+    const METODOS = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
+    const turnos = [];
+
+    for (const t of turnosRaw) {
+      let detalle;
+      if (t.estado === 'cerrada' && t.detalle_metodos) {
+        detalle = typeof t.detalle_metodos === 'string' ? JSON.parse(t.detalle_metodos) : t.detalle_metodos;
+      } else {
+        // Turno aun abierto: no hay nada "verificado" todavia (recien se
+        // ingresa al cerrar), se estima solo el esperado en vivo.
+        detalle = {};
+        for (const m of METODOS) {
+          const [rows] = await db.query(
+            `SELECT COALESCE(SUM(monto),0) AS total FROM pagos_movimientos WHERE caja_turno_id = ? AND metodo = ?`,
+            [t.id, m]
+          );
+          const cobrado = parseFloat(rows[0].total);
+          const esperado = m === 'efectivo' ? parseFloat(t.monto_inicial) + cobrado : cobrado;
+          detalle[m] = { esperado, contado: null };
+        }
       }
+
+      let totalEsperado = 0, totalVerificado = 0;
+      for (const m of METODOS) {
+        totalEsperado += detalle[m]?.esperado || 0;
+        totalVerificado += detalle[m]?.contado ?? 0;
+      }
+
+      turnos.push({
+        recepcionista_nombre: t.recepcionista_nombre,
+        monto_inicial: t.monto_inicial,
+        total_esperado: totalEsperado,
+        total_verificado: totalVerificado
+      });
     }
 
     return reporteHelper.controlCajaRecepcionistas(movimientos, turnos);

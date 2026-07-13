@@ -27,11 +27,11 @@ class CajaController {
   }
 
   async cerrar(req, res) {
-    const { efectivo_contado, notas } = req.body;
-    if (efectivo_contado === undefined || efectivo_contado === null)
-      return res.status(400).json({ error: 'efectivo_contado es requerido' });
+    const { contados, notas } = req.body;
+    if (!contados || contados.efectivo === undefined || contados.efectivo === null)
+      return res.status(400).json({ error: 'El efectivo contado físicamente es obligatorio' });
     try {
-      const resultado = await cajaService.cerrar({ efectivoContado: efectivo_contado, notas, usuarioId: req.user.userId });
+      const resultado = await cajaService.cerrar({ contados, notas, usuarioId: req.user.userId });
       if (!resultado.ok) return res.status(resultado.status).json({ error: resultado.error });
       res.json(resultado);
     } catch (err) {

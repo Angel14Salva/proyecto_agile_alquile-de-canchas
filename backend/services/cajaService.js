@@ -40,35 +40,53 @@ class CajaService {
     return { ok: true, caja_turno_id: ins.insertId };
   }
 
-  async cerrar({ efectivoContado, notas, usuarioId }) {
+  async cerrar({ contados, notas, usuarioId }) {
     const abierta = await this.obtenerAbierta();
     if (!abierta) return { ok: false, error: 'No hay ninguna caja abierta', status: 400 };
 
-    const contado = Math.round(parseFloat(efectivoContado) * 100) / 100;
-    if (Number.isNaN(contado) || contado < 0) return { ok: false, error: 'El efectivo contado es inválido', status: 400 };
-
     const { totales } = await this.totalesTurno(abierta.id);
-    const efectivoEsperado = Math.round((parseFloat(abierta.monto_inicial) + totales.efectivo) * 100) / 100;
-    const diferencia = Math.round((contado - efectivoEsperado) * 100) / 100;
+    const METODOS = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
+    const detalle = {};
+
+    for (const m of METODOS) {
+      // El efectivo arranca con el fondo inicial de caja; los demas metodos
+      // no tienen fondo fisico, solo se verifica lo cobrado por ese medio.
+      const esperado = m === 'efectivo'
+        ? Math.round((parseFloat(abierta.monto_inicial) + totales.efectivo) * 100) / 100
+        : Math.round((totales[m] || 0) * 100) / 100;
+
+      const crudo = contados ? contados[m] : undefined;
+      const contado = (crudo !== undefined && crudo !== null && crudo !== '')
+        ? Math.round(parseFloat(crudo) * 100) / 100
+        : null;
+
+      if (contado !== null && Number.isNaN(contado)) {
+        return { ok: false, error: `El monto contado de ${m} es inválido`, status: 400 };
+      }
+
+      detalle[m] = {
+        esperado,
+        contado,
+        diferencia: contado !== null ? Math.round((contado - esperado) * 100) / 100 : null
+      };
+    }
+
+    if (detalle.efectivo.contado === null) {
+      return { ok: false, error: 'El efectivo contado físicamente es obligatorio', status: 400 };
+    }
 
     await db.query(
       `UPDATE caja_turnos SET estado='cerrada', cerrada_por=?, cerrada_at=NOW(),
-       efectivo_esperado=?, efectivo_contado=?, diferencia=?, notas_cierre=? WHERE id=?`,
-      [usuarioId, efectivoEsperado, contado, diferencia, notas || null, abierta.id]
+       efectivo_esperado=?, efectivo_contado=?, diferencia=?, notas_cierre=?, detalle_metodos=? WHERE id=?`,
+      [usuarioId, detalle.efectivo.esperado, detalle.efectivo.contado, detalle.efectivo.diferencia,
+       notas || null, JSON.stringify(detalle), abierta.id]
     );
 
     return {
       ok: true,
       resumen: {
         monto_inicial: parseFloat(abierta.monto_inicial),
-        efectivo_recibido: totales.efectivo,
-        efectivo_esperado: efectivoEsperado,
-        efectivo_contado: contado,
-        diferencia,
-        yape_recibido: totales.yape,
-        plin_recibido: totales.plin,
-        transferencia_recibida: totales.transferencia,
-        tarjeta_recibida: totales.tarjeta
+        detalle
       }
     };
   }

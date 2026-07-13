@@ -152,6 +152,8 @@ async function runMigrations() {
        FOREIGN KEY (abierta_por) REFERENCES usuarios(id) ON DELETE RESTRICT,
        FOREIGN KEY (cerrada_por) REFERENCES usuarios(id) ON DELETE SET NULL
      )`,
+    `ALTER TABLE caja_turnos ADD COLUMN IF NOT EXISTS detalle_metodos JSON NULL`,
+
     `CREATE INDEX IF NOT EXISTS idx_caja_estado ON caja_turnos(estado)`,
 
     // Detalle real de cada cobro registrado por recepción (permite pago

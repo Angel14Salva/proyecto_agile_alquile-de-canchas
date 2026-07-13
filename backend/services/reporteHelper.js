@@ -54,23 +54,27 @@ function ingresosPorCancha(reservas) {
   }));
 }
 
+const METODOS_REPORTE = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
+
 // 'movimientos' viene de pagos_movimientos: cada fila ya tiene el metodo REAL
-// con el que se cobro ese tramo (nunca 'mixto'), asi que el efectivo vs
-// digital sale exacto aunque una reserva se haya pagado combinando metodos.
+// con el que se cobro ese tramo (nunca 'mixto'), asi que cada metodo sale
+// exacto aunque una reserva se haya pagado combinando varios a la vez.
 // 'turnos' son los caja_turnos del rango, para sumar el fondo inicial y el
 // total esperado de efectivo por recepcionista.
 function controlCajaRecepcionistas(movimientos, turnos = []) {
   const map = {};
   const getOrCreate = (nombre) => {
-    if (!map[nombre]) map[nombre] = { efectivo: 0, digital: 0, total: 0, count: 0, monto_inicial: 0, total_esperado: 0 };
+    if (!map[nombre]) {
+      map[nombre] = { total: 0, count: 0, monto_inicial: 0, total_esperado: 0, total_verificado: 0 };
+      METODOS_REPORTE.forEach(m => { map[nombre][m] = 0; });
+    }
     return map[nombre];
   };
 
   movimientos.forEach(p => {
     const d = getOrCreate(p.recepcionista_nombre || 'En linea');
     const m = parseFloat(p.monto || 0);
-    if (p.metodo === 'efectivo') d.efectivo += m;
-    else d.digital += m;
+    if (METODOS_REPORTE.includes(p.metodo)) d[p.metodo] += m;
     d.total += m;
     d.count++;
   });
@@ -78,18 +82,22 @@ function controlCajaRecepcionistas(movimientos, turnos = []) {
   turnos.forEach(t => {
     const d = getOrCreate(t.recepcionista_nombre || 'Sin asignar');
     d.monto_inicial += parseFloat(t.monto_inicial || 0);
-    d.total_esperado += parseFloat(t.efectivo_esperado || 0);
+    d.total_esperado += parseFloat(t.total_esperado || 0);
+    d.total_verificado += parseFloat(t.total_verificado || 0);
   });
 
-  return Object.entries(map).map(([nombre, d]) => ({
-    nombre,
-    efectivo: Math.round(d.efectivo * 100) / 100,
-    digital: Math.round(d.digital * 100) / 100,
-    total: Math.round(d.total * 100) / 100,
-    cobros: d.count,
-    monto_inicial: Math.round(d.monto_inicial * 100) / 100,
-    total_esperado: Math.round(d.total_esperado * 100) / 100
-  }));
+  return Object.entries(map).map(([nombre, d]) => {
+    const fila = {
+      nombre,
+      total: Math.round(d.total * 100) / 100,
+      cobros: d.count,
+      monto_inicial: Math.round(d.monto_inicial * 100) / 100,
+      total_esperado: Math.round(d.total_esperado * 100) / 100,
+      total_verificado: Math.round(d.total_verificado * 100) / 100
+    };
+    METODOS_REPORTE.forEach(m => { fila[m] = Math.round(d[m] * 100) / 100; });
+    return fila;
+  });
 }
 
 function generarNombreArchivo(desde, hasta, ext) {
