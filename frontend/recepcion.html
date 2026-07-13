@@ -96,57 +96,6 @@
           <div id="checkinAcciones" style="margin-top:12px"></div>
         </div>
       </div>
-      <div class="grid2">
-        <div class="card">
-          <div class="card-title">💵 Registrar pago en caja</div>
-          <div class="form-group">
-            <label>Código de reserva</label>
-            <div class="input-group">
-              <input type="text" id="pagoReservaId" placeholder="Ej: 19 o RES-2026-019">
-              <button class="btn-secondary" onclick="buscarReserva()">Buscar</button>
-            </div>
-            <div id="infoReserva" style="margin-top:8px;font-size:12px;color:var(--green);display:none"></div>
-          </div>
-          <div id="pagoResumen" style="display:none;background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px"></div>
-          <div class="form-group">
-            <label>Monto recibido (S/)</label>
-            <input type="text" id="pagoMonto" placeholder="Total o 50% adelanto" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
-          </div>
-          <div class="form-group">
-            <label>Método de pago</label>
-            <select id="pagoMetodo" onchange="toggleReferencia()">
-              <option value="efectivo">💵 Efectivo</option>
-              <option value="yape">💚 Yape</option>
-              <option value="plin">💙 Plin</option>
-              <option value="transferencia">🏦 Transferencia</option>
-            </select>
-          </div>
-          <div class="form-group" id="grupoReferencia" style="display:none">
-            <label>Número de operación <span style="color:var(--red)">*</span></label>
-            <input type="text" id="pagoReferencia" placeholder="Solo dígitos" maxlength="3" oninput="this.value=this.value.replace(/\D/g,'')">
-          </div>
-          <div class="form-group">
-            <label>Comprobante</label>
-            <select id="pagoComprobante">
-              <option value="boleta">Boleta</option>
-              <option value="factura">Factura</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Email para boleta <span style="font-size:11px;color:var(--gray-muted)">(opcional)</span></label>
-            <input type="email" id="pagoEmailBoleta" placeholder="correo@ejemplo.com">
-          </div>
-          <div class="form-group">
-            <label>Notas (opcional)</label>
-            <input type="text" id="pagoNotas" placeholder="Observaciones del cobro">
-          </div>
-          <button class="btn-primary btn-full" onclick="registrarPago()">Registrar pago</button>
-        </div>
-        <div class="card">
-          <div class="card-title">ℹ️ Ayuda rápida</div>
-          <p style="font-size:13px;color:var(--gray-text)">Use <strong>Check-in</strong> para validar ingreso. El monto debe ser 50% (adelanto) o 100% (completo). Para saldo pendiente use check-in y cobre el monto exacto del saldo.</p>
-        </div>
-      </div>
       <div class="card">
         <div class="card-title">✏️ Modificar reserva</div>
         <div id="alertModificar" class="alert hidden" style="margin-bottom:12px"></div>
@@ -195,10 +144,6 @@
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">📋 Reservas pendientes de pago hoy</div>
-        <div id="pendientesHoy"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-      </div>
     </main>
   </div>
 </div>
@@ -213,7 +158,6 @@
   const hoy = new Date();
   document.getElementById('fechaHoy').textContent = hoy.toLocaleDateString('es-PE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('modFecha').min = hoy.toISOString().split('T')[0];
-  let reservaPago = null;
   let reservaCheckIn = null;
 
   async function cargarEstadoCaja() {
@@ -278,11 +222,6 @@
   }
   cargarEstadoCaja();
 
-  function toggleReferencia() {
-    const m = document.getElementById('pagoMetodo').value;
-    document.getElementById('grupoReferencia').style.display = ['yape','plin'].includes(m) ? 'block' : 'none';
-  }
-
   async function buscarCheckIn() {
     const q = document.getElementById('checkinQ').value.trim();
     if (!q) return;
@@ -336,61 +275,39 @@
   }
 
   function cobrarSaldo(id, monto) {
-    document.getElementById('pagoReservaId').value = id;
-    document.getElementById('pagoReservaId').dataset.reservaId = id;
-    document.getElementById('pagoMonto').value = monto.toFixed(2);
-    document.getElementById('pagoReservaId').dataset.esSaldo = 'true';
-    buscarReserva();
+    const acc = document.getElementById('checkinAcciones');
+    acc.innerHTML = `
+      <div style="background:white;border:1px solid var(--gray-border);border-radius:8px;padding:12px">
+        <p style="font-size:12px;margin-bottom:8px">Cobrar saldo pendiente: <strong>S/ ${monto.toFixed(2)}</strong></p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <select id="saldoMetodo" onchange="document.getElementById('saldoReferencia').style.display=['yape','plin','transferencia'].includes(this.value)?'block':'none'" style="flex:1">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="yape">💚 Yape</option>
+            <option value="plin">💙 Plin</option>
+            <option value="transferencia">🏦 Transferencia</option>
+          </select>
+        </div>
+        <input type="text" id="saldoReferencia" placeholder="N° operación" style="display:none;width:100%;margin-bottom:8px">
+        <div id="alertSaldo" class="alert hidden" style="margin-bottom:8px"></div>
+        <button class="btn-primary" onclick="confirmarCobroSaldo(${id}, ${monto})">💵 Cobrar saldo</button>
+      </div>`;
   }
 
-  async function buscarReserva() {
-    const val = document.getElementById('pagoReservaId').value.trim();
-    if (!val) return;
-    const info = document.getElementById('infoReserva');
-    const resumen = document.getElementById('pagoResumen');
-    try {
-      let reserva;
-      reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
-      reservaPago = reserva;
-      document.getElementById('pagoReservaId').dataset.reservaId = reserva.id;
-      document.getElementById('pagoReservaId').dataset.esSaldo = 'false';
-      const total = parseFloat(reserva.precio_hora||0);
-      const pagado = parseFloat(reserva.pago_monto||0);
-      const saldo = Math.max(0, total - pagado);
-      info.style.display = 'block'; info.style.color = 'var(--green)';
-      info.textContent = '✅ '+reserva.cancha_nombre+' · '+reserva.fecha?.substring(0,10)+' · Cliente: '+reserva.cliente_nombre;
-      resumen.style.display = 'block';
-      resumen.innerHTML = `<strong>Resumen:</strong> ${reserva.cancha_nombre}<br>Fecha: ${reserva.fecha?.substring(0,10)} · ${reserva.hora_inicio?.substring(0,5)} – ${reserva.hora_fin?.substring(0,5)}<br>Total: S/ ${total.toFixed(2)} · Pagado: S/ ${pagado.toFixed(2)} · Saldo: S/ ${saldo.toFixed(2)}`;
-      if (!document.getElementById('pagoMonto').value) {
-        document.getElementById('pagoMonto').value = saldo > 0 && pagado > 0 ? saldo.toFixed(2) : total.toFixed(2);
-      }
-    } catch(err) { info.style.display='block'; info.style.color='var(--red)'; info.textContent='❌ '+err.message; resumen.style.display='none'; }
-  }
-
-  async function registrarPago() {
-    const metodo = document.getElementById('pagoMetodo').value;
-    const ref    = document.getElementById('pagoReferencia').value;
-    const monto  = document.getElementById('pagoMonto').value;
-    const alerta = document.getElementById('alertPago');
-    const input  = document.getElementById('pagoReservaId');
-    const reservaId = input.dataset.reservaId || input.value;
-    if (!reservaId) { alerta.textContent='Busca primero la reserva'; alerta.className='alert alert-error'; return; }
+  async function confirmarCobroSaldo(id, monto) {
+    const metodo = document.getElementById('saldoMetodo').value;
+    const referencia = document.getElementById('saldoReferencia').value.trim();
+    const alerta = document.getElementById('alertSaldo');
     try {
       await api.post('/api/pagos', {
-        reserva_id: parseInt(reservaId, 10),
-        metodo, monto: parseFloat(monto),
-        referencia: ref || null,
-        tipo_comprobante: document.getElementById('pagoComprobante').value,
-        notas: document.getElementById("pagoNotas").value || null,
-        email_boleta: document.getElementById("pagoEmailBoleta").value || null,
-        es_saldo: input.dataset.esSaldo === 'true'
+        reserva_id: id, metodo, monto, referencia: referencia || null,
+        tipo_comprobante: 'boleta', es_saldo: true
       });
-      alerta.textContent='✅ Pago registrado correctamente'; alerta.className='alert alert-success';
-      input.value=''; input.dataset.reservaId=''; input.dataset.esSaldo='false';
-      document.getElementById('pagoReferencia').value=''; document.getElementById('pagoMonto').value='';
-      document.getElementById('pagoResumen').style.display='none';
-      reservaPago=null; cargarPendientes(); cargarEstadoCaja();
-    } catch(err) { alerta.textContent=err.message; alerta.className='alert alert-error'; }
+      document.getElementById('alertPago').textContent = '✅ Saldo cobrado correctamente';
+      document.getElementById('alertPago').className = 'alert alert-success';
+      cargarEstadoCaja();
+      buscarCheckIn();
+    } catch(err) { alerta.textContent = err.message; alerta.className = 'alert alert-error'; }
   }
 
   let reservaEnEdicion = null;
@@ -473,7 +390,7 @@
       const nuevaHoraFin = document.getElementById('modHoraFin').value;
       await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora, hora_fin: nuevaHoraFin || undefined });
       alerta.textContent='✅ Reserva modificada exitosamente.'; alerta.className='alert alert-success';
-      cancelarModificacion(); cargarPendientes();
+      cancelarModificacion();
     } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
   }
 
@@ -483,44 +400,6 @@
     document.getElementById('modFormContainer').style.display='none';
     document.getElementById('modInfoActual').innerHTML='';
   }
-
-  async function cargarPendientes() {
-    try {
-      const fecha = hoy.toISOString().split('T')[0];
-      const reservas = await api.get(`/api/reservas?fecha=${fecha}&estado=pendiente`);
-      const div = document.getElementById('pendientesHoy');
-      if (reservas.length===0) { div.innerHTML='<div class="empty"><div class="empty-icon">✅</div>No hay reservas pendientes de pago</div>'; return; }
-      const filasNormales = reservas.map(r=>`<tr>
-          <td>${r.id}</td>
-          <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo||'—'}</code></td>
-          <td>${r.cliente_nombre}<br><span style="font-size:11px;color:var(--gray-muted)">${r.cliente_telefono||''}</span></td>
-          <td>${r.cancha_nombre}</td>
-          <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
-          <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
-          <td><span class="badge ${r.origen==='linea'?'badge-blue':'badge-amber'}">${r.origen==='linea'?'En línea':'Recepción'}</span></td>
-          <td style="display:flex;gap:6px">
-            <button class="btn-primary btn-sm" onclick="cobrarRapido(${r.id})">Cobrar</button>
-            <button class="btn-secondary btn-sm" onclick="modificarRapido('${r.codigo||r.id}')">Editar</button>
-          </td>
-        </tr>`).join('');
-      div.innerHTML = `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Código</th><th>Cliente</th><th>Cancha</th><th>Hora</th><th>Monto</th><th>Origen</th><th>Acción</th></tr></thead><tbody>${filasNormales}</tbody></table></div>`;
-    } catch(err) { document.getElementById('pendientesHoy').innerHTML=`<p style="color:var(--red)">${err.message}</p>`; }
-  }
-  function cobrarRapido(id) {
-    document.getElementById('pagoReservaId').value=id;
-    document.getElementById('pagoMetodo').value='efectivo';
-    document.querySelector('.card:nth-child(2)').scrollIntoView({behavior:'smooth'});
-  }
-
-  function modificarRapido(codigoOId) {
-    document.getElementById('modReservaId').value=codigoOId;
-    document.getElementById('modFormContainer').style.display='none';
-    document.getElementById('alertModificar').className='alert hidden';
-    document.getElementById('modReservaId').closest('.card').scrollIntoView({behavior:'smooth'});
-    buscarReservaModificar();
-  }
-
-  cargarPendientes();
 </script>
 </body>
 </html>

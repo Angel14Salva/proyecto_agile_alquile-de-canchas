@@ -110,15 +110,40 @@
         <div class="card" id="cardPago" style="display:none">
           <div class="card-title">4. Confirmar y pagar</div>
           <input type="hidden" id="metodo" value="flow">
-          <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px">
+
+          <div id="panelPagoOnline" style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px">
             <p style="font-weight:700;margin:0 0 10px;font-size:14px">Medios de pago disponibles:</p>
             <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#444">
               <div>💳 Tarjetas de crédito y débito (Visa, Mastercard)</div>
               <div>📱 Billeteras electrónicas: Yape, Plin y otras</div>
               <div>🏪 Banca móvil, agentes y bodegas (PagoEfectivo)</div>
-              <div id="opcionEfectivo" style="display:none">💵 Efectivo en caja (solo recepción)</div>
             </div>
           </div>
+
+          <!-- Solo para recepcion/admin: cobro presencial en el momento, posiblemente con mas de un metodo -->
+          <div id="panelPagoCaja" style="display:none;background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px">
+            <p style="font-weight:700;margin:0 0 4px;font-size:14px">💵 Cobro en caja</p>
+            <p style="font-size:12px;color:var(--gray-text);margin:0 0 12px">El pago debe completarse en su totalidad ahora. Puedes combinar más de un método (ej. una parte en efectivo y otra en tarjeta).</p>
+            <div id="lineasPago"></div>
+            <button type="button" class="btn-secondary" onclick="agregarLineaPago()" style="margin-top:8px">+ Agregar otro método de pago</button>
+            <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:13px;padding:10px;background:white;border-radius:8px;border:1px solid var(--gray-border)">
+              <span>Total ingresado:</span>
+              <strong id="totalIngresadoPago">S/ 0.00</strong>
+            </div>
+            <div class="form-group" style="margin-top:12px">
+              <label>Comprobante</label>
+              <select id="pagoTipoComprobante">
+                <option value="boleta">Boleta</option>
+                <option value="factura">Factura</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Email para el comprobante (opcional)</label>
+              <input type="text" id="pagoEmailBoleta" placeholder="correo@ejemplo.com">
+            </div>
+            <div id="alertPagoCaja" class="alert hidden" style="margin-top:8px"></div>
+          </div>
+
           <div class="form-group">
             <label>Notas (opcional)</label>
             <input type="text" id="notas" placeholder="Ej: traer pecheras, partido amistoso...">
@@ -146,6 +171,7 @@
 <script src="js/sidebar.js"></script>
 <script>
   requireAuth();
+
   renderSidebar('reservar');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 
@@ -177,12 +203,70 @@
     if (usuario.dni && /^\d{8}$/.test(usuario.dni)) document.getElementById('clienteDni').value = usuario.dni;
   }
 
-  // Mostrar efectivo en caja solo para recepcionista/admin
+  // Staff (recepcion/admin): cobra ahi mismo, posiblemente con mas de un metodo
   const rolActual = api.getUsuario()?.rol;
-  if (rolActual === 'recepcionista' || rolActual === 'admin') {
-    const opEfectivo = document.getElementById('opcionEfectivo');
-    if (opEfectivo) opEfectivo.style.display = '';
+  const esStaffPago = (rolActual === 'recepcionista' || rolActual === 'admin');
+  let contadorLineaPago = 0;
+
+  if (esStaffPago) {
+    document.getElementById('panelPagoOnline').style.display = 'none';
+    document.getElementById('panelPagoCaja').style.display = 'block';
+    agregarLineaPago();
   }
+
+  function agregarLineaPago() {
+    contadorLineaPago++;
+    const id = contadorLineaPago;
+    const div = document.createElement('div');
+    div.id = 'lineaPago' + id;
+    div.style.cssText = 'display:flex;gap:8px;align-items:flex-start;margin-bottom:8px';
+    div.innerHTML = `
+      <select id="lineaMetodo${id}" onchange="toggleReferenciaLinea(${id})" style="flex:1">
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="yape">💚 Yape</option>
+        <option value="plin">💙 Plin</option>
+        <option value="transferencia">🏦 Transferencia</option>
+      </select>
+      <input type="text" id="lineaMonto${id}" placeholder="Monto S/" style="width:110px" oninput="this.value=this.value.replace(/[^\d.]/g,'');actualizarTotalPago()">
+      <input type="text" id="lineaReferencia${id}" placeholder="N° operación" style="flex:1;display:none">
+      ${contadorLineaPago > 1 ? `<button type="button" class="btn-secondary" onclick="quitarLineaPago(${id})">✕</button>` : ''}
+    `;
+    document.getElementById('lineasPago').appendChild(div);
+    actualizarTotalPago();
+  }
+
+  function quitarLineaPago(id) {
+    const el = document.getElementById('lineaPago' + id);
+    if (el) el.remove();
+    actualizarTotalPago();
+  }
+
+  function toggleReferenciaLinea(id) {
+    const metodo = document.getElementById('lineaMetodo' + id).value;
+    document.getElementById('lineaReferencia' + id).style.display = ['yape','plin','transferencia'].includes(metodo) ? 'block' : 'none';
+  }
+
+  function actualizarTotalPago() {
+    let total = 0;
+    document.querySelectorAll('[id^="lineaMonto"]').forEach(input => {
+      total += parseFloat(input.value) || 0;
+    });
+    document.getElementById('totalIngresadoPago').textContent = 'S/ ' + total.toFixed(2);
+  }
+
+  function obtenerLineasPago() {
+    const lineas = [];
+    document.querySelectorAll('[id^="lineaPago"]').forEach(div => {
+      const id = div.id.replace('lineaPago', '');
+      const metodo = document.getElementById('lineaMetodo' + id).value;
+      const monto = parseFloat(document.getElementById('lineaMonto' + id).value);
+      const referencia = document.getElementById('lineaReferencia' + id).value.trim();
+      lineas.push({ metodo, monto, referencia: referencia || null });
+    });
+    return lineas;
+  }
+
   async function cargarCanchas() {
     canchas = await api.get('/api/canchas', false);
     filtrarCanchas();
@@ -367,20 +451,31 @@
     btn.disabled    = true;
     alertEl.className = 'alert hidden';
 
-    const rolActual = api.getUsuario()?.rol;
-    const esPagoEnCaja = (metodo === 'efectivo' || rolActual === 'recepcionista' || rolActual === 'admin');
-
     try {
-      if (esPagoEnCaja) {
-        // Pago presencial en caja: la reserva se crea de una vez (el staff cobra ahí mismo)
-        const reserva = await api.post('/api/reservas', {
+      if (esStaffPago) {
+        // Cobro presencial en el momento (puede ser hibrido: varios metodos a la vez)
+        const lineas = obtenerLineasPago();
+        const alertaPago = document.getElementById('alertPagoCaja');
+        alertaPago.className = 'alert hidden';
+        for (const l of lineas) {
+          if (!l.metodo || isNaN(l.monto) || l.monto <= 0) {
+            alertaPago.textContent = 'Completa un monto válido en cada línea de pago';
+            alertaPago.className = 'alert alert-error';
+            btn.textContent = 'Confirmar reserva →'; btn.disabled = false;
+            return;
+          }
+        }
+        const reserva = await api.post('/api/pagos/reserva-con-pago', {
           cancha_id:      parseInt(canchaId),
           fecha,
           hora_inicio:    horaInicio,
           hora_fin:       horaFin,
           notas:          notas || null,
           cliente_nombre: nombre,
-          cliente_dni:    dni
+          cliente_dni:    dni,
+          pagos:          lineas,
+          tipo_comprobante: document.getElementById('pagoTipoComprobante').value,
+          email_boleta:     document.getElementById('pagoEmailBoleta').value || null
         });
         document.getElementById('formReserva').style.display = 'none';
         document.getElementById('codigoReserva').textContent = `Código: ${reserva.codigo}`;

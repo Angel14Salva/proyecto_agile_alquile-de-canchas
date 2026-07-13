@@ -1,9 +1,9 @@
 'use strict';
 
 const db = require('../db/connection');
-const { validarRegistroPago } = require('../validators/pagoValidator');
+const { validarRegistroPago, validarPagosHibridos } = require('../validators/pagoValidator');
 const comprobanteService = require('./comprobanteService');
-const { enviarConfirmacionPago, enviarBoletaVenta } = require('./emailService');
+const { enviarConfirmacionPago, enviarBoletaVenta, enviarConfirmacionReserva } = require('./emailService');
 
 class PagoService {
   calcularSaldo(precioTotal, montoPagado, tipoPago) {
@@ -23,6 +23,113 @@ class PagoService {
     if (excluirReservaId) { sql += ' AND reserva_id != ?'; params.push(excluirReservaId); }
     const [rows] = await db.query(sql, params);
     return rows.length > 0;
+  }
+
+  // Recepcion/admin crean la reserva y la cobran en el mismo paso: la reserva
+  // nace ya "confirmada" y pagada (posiblemente con mas de un metodo a la
+  // vez, ej. efectivo + tarjeta). Ya no existe adelanto/pago parcial aqui.
+  async crearReservaConPago({ cancha_id, fecha, hora_inicio, hora_fin, notas, cliente_nombre, cliente_dni, pagos, tipo_comprobante, email_boleta, usuarioId }) {
+    if (!cancha_id || !fecha || !hora_inicio || !hora_fin)
+      return { ok: false, error: 'Cancha, fecha, hora inicio y hora fin son requeridos', status: 400 };
+    if (!cliente_nombre || !cliente_nombre.trim())
+      return { ok: false, error: 'El nombre del cliente es requerido', status: 400 };
+    if (!cliente_dni || !/^\d{8}$/.test(cliente_dni))
+      return { ok: false, error: 'El DNI debe tener exactamente 8 digitos numericos', status: 400 };
+
+    const [cajaAbierta] = await db.query("SELECT id FROM caja_turnos WHERE estado = 'abierta' LIMIT 1");
+    if (cajaAbierta.length === 0) {
+      return { ok: false, error: 'No hay una caja abierta. Abre caja antes de registrar reservas con pago.', status: 400 };
+    }
+    const cajaTurnoId = cajaAbierta[0].id;
+
+    const [ocupado] = await db.query(
+      'SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado != "cancelada" AND hora_inicio < ? AND hora_fin > ?',
+      [cancha_id, fecha, hora_fin, hora_inicio]
+    );
+    if (ocupado.length > 0) return { ok: false, error: 'Ese horario ya esta reservado o se superpone con otra reserva', status: 409 };
+
+    const [canchaRows] = await db.query('SELECT id, nombre, precio_hora FROM canchas WHERE id = ? AND activo = TRUE', [cancha_id]);
+    if (canchaRows.length === 0) return { ok: false, error: 'Cancha no encontrada', status: 404 };
+    const cancha = canchaRows[0];
+
+    const horas = Math.max(1, (parseInt(hora_fin.split(':')[0]) - parseInt(hora_inicio.split(':')[0])));
+    const precioTotal = parseFloat(cancha.precio_hora) * horas;
+
+    const validacion = validarPagosHibridos(pagos, precioTotal);
+    if (!validacion.valido) return { ok: false, error: validacion.error, status: 400 };
+
+    for (const linea of validacion.lineas) {
+      const duplicada = await this.verificarReferenciaDuplicada(linea.referencia, null);
+      if (duplicada) return { ok: false, error: `El numero de operacion ${linea.referencia} ya fue registrado`, status: 409 };
+    }
+
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const anio = new Date().getFullYear();
+      const [crows] = await conn.query('SELECT COUNT(*) as total FROM reservas WHERE YEAR(created_at) = ?', [anio]);
+      const codigo = `RES-${anio}-${String(crows[0].total + 1).padStart(3, '0')}`;
+
+      const [result] = await conn.query(
+        `INSERT INTO reservas (codigo, cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, origen, notas, cliente_nombre, cliente_dni)
+         VALUES (?, ?, ?, ?, ?, ?, "confirmada", "recepcion", ?, ?, ?)`,
+        [codigo, cancha_id, usuarioId, fecha, hora_inicio, hora_fin, notas || null, cliente_nombre.trim(), cliente_dni]
+      );
+      const reservaId = result.insertId;
+
+      const referenciaConsolidada = validacion.lineas.length === 1 ? validacion.lineas[0].referencia : null;
+      const [pagoResult] = await conn.query(
+        `INSERT INTO pagos (reserva_id, monto, metodo, estado, tipo_pago, referencia, registrado_por)
+         VALUES (?, ?, ?, 'pagado', 'completo', ?, ?)`,
+        [reservaId, validacion.monto, validacion.metodoConsolidado, referenciaConsolidada, usuarioId]
+      );
+      const pagoId = pagoResult.insertId;
+
+      for (const linea of validacion.lineas) {
+        await conn.query(
+          `INSERT INTO pagos_movimientos (pago_id, caja_turno_id, metodo, monto, referencia, registrado_por)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [pagoId, cajaTurnoId, linea.metodo, linea.monto, linea.referencia, usuarioId]
+        );
+      }
+
+      const comprobante = await comprobanteService.crearComprobante(conn, {
+        pagoId, reservaId, tipo: tipo_comprobante || 'boleta'
+      });
+
+      await conn.commit();
+
+      try {
+        const [urows] = await db.query('SELECT email FROM usuarios WHERE id = ?', [usuarioId]);
+        if (urows.length > 0) {
+          await enviarConfirmacionReserva(urows[0].email, {
+            nombre: cliente_nombre.trim(), codigo, cancha: cancha.nombre, fecha,
+            horaInicio: hora_inicio.substring(0, 5), horaFin: hora_fin.substring(0, 5), monto: precioTotal
+          });
+          await enviarConfirmacionPago(urows[0].email, {
+            nombre: cliente_nombre.trim(), codigo, monto: precioTotal,
+            tipo_pago: 'completo', comprobante: comprobante.numero
+          });
+        }
+        if (email_boleta) {
+          await enviarBoletaVenta(email_boleta, {
+            nombre: cliente_nombre.trim(), codigo, cancha: cancha.nombre, fecha,
+            horaInicio: hora_inicio.substring(0, 5), horaFin: hora_fin.substring(0, 5),
+            monto: precioTotal, metodo: validacion.metodoConsolidado, referencia: referenciaConsolidada,
+            comprobante: tipo_comprobante || 'boleta', numeroComprobante: comprobante.numero
+          });
+        }
+      } catch (mailErr) { console.error('Error enviando correo (reserva con pago):', mailErr.message); }
+
+      return { ok: true, reserva_id: reservaId, codigo, comprobante };
+    } catch (err) {
+      await conn.rollback();
+      console.error('Error en crearReservaConPago:', err);
+      return { ok: false, error: 'Error al crear la reserva con pago', status: 500 };
+    } finally {
+      conn.release();
+    }
   }
 
   async registrarPagoRecepcion({ reservaId, body, registradoPor, esSaldo = false }) {

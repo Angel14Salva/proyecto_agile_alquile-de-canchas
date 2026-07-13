@@ -24,6 +24,23 @@ class PagoController {
     }
   }
 
+  async crearConPago(req, res) {
+    const esStaff = ['recepcionista', 'admin'].includes(req.user.rol);
+    if (!esStaff) return res.status(403).json({ error: 'Solo recepcion puede registrar reservas con pago' });
+
+    try {
+      const resultado = await pagoService.crearReservaConPago({
+        ...req.body,
+        usuarioId: req.user.userId
+      });
+      if (!resultado.ok) return res.status(resultado.status).json({ error: resultado.error });
+      res.status(201).json(resultado);
+    } catch (err) {
+      console.error('Error en crearConPago:', err);
+      res.status(500).json({ error: 'Error al crear la reserva con pago' });
+    }
+  }
+
   async getByReserva(req, res) {
     try {
       const [rows] = await require('../db/connection').query(
