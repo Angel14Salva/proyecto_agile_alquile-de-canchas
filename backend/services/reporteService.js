@@ -55,16 +55,39 @@ class ReporteService {
   }
 
   async controlCaja(desde, hasta, recepcionistaId = null) {
-    let sql = `
-      SELECT p.*, ur.nombre AS recepcionista_nombre, r.fecha
-      FROM pagos p
+    let sqlMov = `
+      SELECT pm.metodo, pm.monto, ur.nombre AS recepcionista_nombre
+      FROM pagos_movimientos pm
+      JOIN pagos p ON pm.pago_id = p.id
       JOIN reservas r ON p.reserva_id = r.id
-      LEFT JOIN usuarios ur ON p.registrado_por = ur.id
+      LEFT JOIN usuarios ur ON pm.registrado_por = ur.id
       WHERE p.estado = 'pagado' AND r.fecha BETWEEN ? AND ?`;
-    const params = [desde, hasta];
-    if (recepcionistaId) { sql += ' AND p.registrado_por = ?'; params.push(recepcionistaId); }
-    const [pagos] = await db.query(sql, params);
-    return reporteHelper.controlCajaRecepcionistas(pagos);
+    const paramsMov = [desde, hasta];
+    if (recepcionistaId) { sqlMov += ' AND pm.registrado_por = ?'; paramsMov.push(recepcionistaId); }
+    const [movimientos] = await db.query(sqlMov, paramsMov);
+
+    let sqlTurnos = `
+      SELECT ct.id, ct.estado, ct.monto_inicial, ct.efectivo_esperado, ur.nombre AS recepcionista_nombre
+      FROM caja_turnos ct
+      JOIN usuarios ur ON ct.abierta_por = ur.id
+      WHERE DATE(ct.abierta_at) BETWEEN ? AND ?`;
+    const paramsTurnos = [desde, hasta];
+    if (recepcionistaId) { sqlTurnos += ' AND ct.abierta_por = ?'; paramsTurnos.push(recepcionistaId); }
+    const [turnos] = await db.query(sqlTurnos, paramsTurnos);
+
+    // Turnos aun abiertos: el "esperado" todavia no esta guardado (se calcula
+    // recien al cerrar), asi que se estima en vivo con lo cobrado hasta ahora.
+    for (const t of turnos) {
+      if (t.estado === 'abierta') {
+        const [rows] = await db.query(
+          `SELECT COALESCE(SUM(monto),0) AS total FROM pagos_movimientos WHERE caja_turno_id = ? AND metodo = 'efectivo'`,
+          [t.id]
+        );
+        t.efectivo_esperado = parseFloat(t.monto_inicial) + parseFloat(rows[0].total);
+      }
+    }
+
+    return reporteHelper.controlCajaRecepcionistas(movimientos, turnos);
   }
 
   async registrarCajaInicial(anio, mes, monto) {

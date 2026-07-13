@@ -255,8 +255,8 @@
         return;
       }
       document.getElementById('controlCaja').innerHTML =
-        `<div class="table-wrap"><table><thead><tr><th>Recepcionista</th><th>Efectivo</th><th>Digital</th><th>Total</th></tr></thead><tbody>
-          ${caja.map(c => `<tr><td>${c.nombre}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td><strong>S/ ${c.total.toFixed(2)}</strong></td></tr>`).join('')}
+        `<div class="table-wrap"><table><thead><tr><th>Recepcionista</th><th>Monto inicial</th><th>Efectivo cobrado</th><th>Digital</th><th>Total cobrado</th><th>Esperado al cierre</th></tr></thead><tbody>
+          ${caja.map(c => `<tr><td>${c.nombre}</td><td>S/ ${c.monto_inicial.toFixed(2)}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td>S/ ${c.total.toFixed(2)}</td><td><strong>S/ ${c.total_esperado.toFixed(2)}</strong></td></tr>`).join('')}
         </tbody></table></div>`;
     } catch(e) { console.error(e); }
   }
