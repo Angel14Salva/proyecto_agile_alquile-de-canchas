@@ -136,21 +136,9 @@
   }
   async function cargar() {
     try {
-      const [todas, grandesRaw] = await Promise.all([
-        api.get('/api/reservas'),
-        api.get('/api/reservas-grandes').catch(()=>[])
-      ]);
-      const grandes = (Array.isArray(grandesRaw) ? grandesRaw : (grandesRaw.reservas||[]));
-      const grandesFormateadas = grandes.map(g => ({
-        id: g.id, codigo: g.codigo,
-        cancha_nombre: g.num_canchas + ' canchas (' + (g.turno||'').replace('_',' ') + ')',
-        fecha: g.fecha, hora_inicio: g.hora_inicio, hora_fin: g.hora_fin,
-        estado: g.estado || 'pendiente',
-        pago_estado: parseFloat(g.monto_pagado||0) > 0 ? 'pagado' : 'pendiente',
-        precio_hora: g.precio_total, _esGrande: true
-      }));
+      const todas = await api.get('/api/reservas');
       // Filtrar automáticamente registros con más de 6 meses de antigüedad
-      reservas = [...todas.filter(r => new Date(r.fecha) >= limiteArchivo), ...grandesFormateadas];
+      reservas = todas.filter(r => new Date(r.fecha) >= limiteArchivo);
       filtrar();
     } catch(err) {
       document.getElementById('tablaReservas').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;

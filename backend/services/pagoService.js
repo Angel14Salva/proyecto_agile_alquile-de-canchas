@@ -26,6 +26,12 @@ class PagoService {
   }
 
   async registrarPagoRecepcion({ reservaId, body, registradoPor, esSaldo = false }) {
+    const [cajaAbierta] = await db.query("SELECT id FROM caja_turnos WHERE estado = 'abierta' LIMIT 1");
+    if (cajaAbierta.length === 0) {
+      return { ok: false, error: 'No hay una caja abierta. Abre caja antes de registrar pagos.', status: 400 };
+    }
+    const cajaTurnoId = cajaAbierta[0].id;
+
     const [reservaRows] = await db.query(
       `SELECT r.*, c.precio_hora, u.email AS cliente_email, u.nombre AS usuario_nombre
        FROM reservas r JOIN canchas c ON r.cancha_id = c.id JOIN usuarios u ON r.usuario_id = u.id
@@ -60,13 +66,17 @@ class PagoService {
       let pagoId;
       let montoFinal = validacion.monto;
       let tipoFinal = validacion.tipo_pago;
+      let metodoFinal = validacion.metodo;
 
       if (pagoActual && pagoActual.tipo_pago === 'adelanto') {
         montoFinal = Math.round((parseFloat(pagoActual.monto) + validacion.monto) * 100) / 100;
         tipoFinal = 'completo';
+        // Si el segundo tramo usa un método distinto al primero, la reserva
+        // quedó pagada con más de un método (pago mixto/híbrido).
+        metodoFinal = (pagoActual.metodo && pagoActual.metodo !== validacion.metodo) ? 'mixto' : validacion.metodo;
         await conn.query(
           `UPDATE pagos SET monto = ?, metodo = ?, tipo_pago = ?, referencia = ?, notas = COALESCE(?, notas), registrado_por = ? WHERE id = ?`,
-          [montoFinal, validacion.metodo, tipoFinal, validacion.referencia, validacion.notas, registradoPor, pagoActual.id]
+          [montoFinal, metodoFinal, tipoFinal, validacion.referencia, validacion.notas, registradoPor, pagoActual.id]
         );
         pagoId = pagoActual.id;
       } else if (pagoActual) {
@@ -84,13 +94,21 @@ class PagoService {
         pagoId = ins.insertId;
       }
 
+      // Movimiento real de este cobro (el tramo que se acaba de cobrar, con
+      // su método exacto) — es lo que alimenta el cuadre de caja.
+      await conn.query(
+        `INSERT INTO pagos_movimientos (pago_id, caja_turno_id, metodo, monto, referencia, registrado_por)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [pagoId, cajaTurnoId, validacion.metodo, validacion.monto, validacion.referencia, registradoPor]
+      );
+
       await conn.query('UPDATE reservas SET estado = "confirmada" WHERE id = ?', [reservaId]);
 
-      const comprobante = await comprobanteService.crearComprobante(conn, {
-        pagoId,
-        reservaId,
-        tipo: validacion.tipo_comprobante
-      });
+      // Un comprobante por reserva: si ya existe (p.ej. se generó con el
+      // adelanto), se reutiliza al completar el saldo en vez de duplicarlo.
+      const comprobante = pagoActual
+        ? await comprobanteService.obtenerComprobanteOriginal(conn, pagoId, reservaId)
+        : await comprobanteService.crearComprobante(conn, { pagoId, reservaId, tipo: validacion.tipo_comprobante });
 
       await conn.commit();
 

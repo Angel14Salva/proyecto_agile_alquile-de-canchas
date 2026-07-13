@@ -145,27 +145,6 @@
 <script src="js/auth.js"></script>
 <script src="js/sidebar.js"></script>
 <script>
-  // Manejar retorno de Flow ANTES del guard
-  const _urlParams = new URLSearchParams(window.location.search);
-  if (_urlParams.get('status') === 'success' && _urlParams.get('reserva')) {
-    fetch('/api/pagos/flow/retorno', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
-      body: JSON.stringify({ reserva_id: _urlParams.get('reserva') })
-    }).catch(e => console.log('retorno:', e));
-    document.body.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f0fdf4;font-family:sans-serif">
-        <div style="text-align:center;padding:40px;background:white;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.1);max-width:400px">
-          <div style="font-size:64px">✅</div>
-          <h1 style="color:#16a34a;margin:16px 0">¡Pago exitoso!</h1>
-          <p style="color:#6b7280">Tu reserva ha sido confirmada correctamente.</p>
-          <p style="color:#6b7280">Recibirás un correo con los detalles.</p>
-          <a href="#" onclick="verReservas()" style="display:inline-block;margin-top:24px;padding:12px 24px;background:#16a34a;color:white;border-radius:8px;text-decoration:none;font-weight:600">Ver mis reservas</a>
-        </div>
-      </div>
-    `;
-    throw new Error('stop');
-  }
   requireAuth();
   renderSidebar('reservar');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
@@ -387,31 +366,40 @@
     btn.textContent = 'Procesando...';
     btn.disabled    = true;
     alertEl.className = 'alert hidden';
-    try {
-      const reserva = await api.post('/api/reservas', {
-        cancha_id:      parseInt(canchaId),
-        fecha,
-        hora_inicio:    horaInicio,
-        hora_fin:       horaFin,
-        precio_hora:    precioHora * (parseInt(horaFin.split(':')[0]) - parseInt(horaInicio.split(':')[0])),
-        notas:          notas || null,
-        cliente_nombre: nombre,
-        cliente_dni:    dni
-      });
 
-      // Pago en línea vía pasarela (todos excepto efectivo en caja)
-      const rolActual = api.getUsuario()?.rol;
-      if (metodo === 'efectivo' || rolActual === 'recepcionista' || rolActual === 'admin') {
-        // Pago en caja - mostrar exito directo
+    const rolActual = api.getUsuario()?.rol;
+    const esPagoEnCaja = (metodo === 'efectivo' || rolActual === 'recepcionista' || rolActual === 'admin');
+
+    try {
+      if (esPagoEnCaja) {
+        // Pago presencial en caja: la reserva se crea de una vez (el staff cobra ahí mismo)
+        const reserva = await api.post('/api/reservas', {
+          cancha_id:      parseInt(canchaId),
+          fecha,
+          hora_inicio:    horaInicio,
+          hora_fin:       horaFin,
+          notas:          notas || null,
+          cliente_nombre: nombre,
+          cliente_dni:    dni
+        });
+        document.getElementById('formReserva').style.display = 'none';
+        document.getElementById('codigoReserva').textContent = `Código: ${reserva.codigo}`;
+        document.getElementById('successMsg').classList.remove('hidden');
       } else {
-        const pagoResp = await api.post('/api/pagos/flow/crear', { reserva_id: reserva.reserva_id });
+        // Pago en línea vía pasarela: la reserva NO se crea todavía.
+        // Recién se crea cuando Flow confirme que el pago se completó.
+        const pagoResp = await api.post('/api/pagos/flow/crear', {
+          cancha_id:      parseInt(canchaId),
+          fecha,
+          hora_inicio:    horaInicio,
+          hora_fin:       horaFin,
+          notas:          notas || null,
+          cliente_nombre: nombre,
+          cliente_dni:    dni
+        });
         window.location.href = pagoResp.url;
         return;
       }
-
-      document.getElementById('formReserva').style.display = 'none';
-      document.getElementById('codigoReserva').textContent = `Código: ${reserva.codigo}`;
-      document.getElementById('successMsg').classList.remove('hidden');
 
     } catch(err) {
       alertEl.textContent = err.message;
