@@ -228,7 +228,7 @@
         <option value="plin">💙 Plin</option>
         <option value="transferencia">🏦 Transferencia</option>
       </select>
-      <input type="text" id="lineaMonto${id}" placeholder="Monto S/" style="width:110px" oninput="this.value=this.value.replace(/[^\d.]/g,'');actualizarTotalPago()">
+      <input type="text" id="lineaMonto${id}" placeholder="Monto S/" style="width:110px" oninput="this.value=this.value.replace(/[^\\d.]/g,'');actualizarTotalPago()">
       <input type="text" id="lineaReferencia${id}" placeholder="N° operación" style="flex:1;display:none">
       ${contadorLineaPago > 1 ? `<button type="button" class="btn-secondary" onclick="quitarLineaPago(${id})">✕</button>` : ''}
     `;
