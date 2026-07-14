@@ -179,6 +179,7 @@ async function runMigrations() {
     // HU: Cupones de reembolso excepcional
     `ALTER TABLE pagos_movimientos MODIFY COLUMN metodo ENUM('efectivo','transferencia','yape','plin','tarjeta','flow','cupon') NOT NULL`,
     `ALTER TABLE pagos MODIFY COLUMN metodo ENUM('efectivo','transferencia','yape','plin','tarjeta','flow','mixto','cupon') NOT NULL`,
+    `ALTER TABLE pagos MODIFY COLUMN reembolso_metodo ENUM('efectivo','transferencia','cupon') NULL`,
     `CREATE TABLE IF NOT EXISTS cupones (
        id                INT AUTO_INCREMENT PRIMARY KEY,
        codigo            VARCHAR(20)   NOT NULL UNIQUE,

@@ -215,12 +215,14 @@ class ReservaController {
 
   async cancelarRecepcion(req, res) {
     const { id } = req.params;
-    const { reembolso_confirmado, reembolso_metodo } = req.body || {};
+    const { reembolso_confirmado, reembolso_metodo, reembolso_excepcional, motivo_excepcional } = req.body || {};
 
     try {
       const resultado = await cancelacionService.cancelarRecepcion(parseInt(id, 10), {
         reembolsoConfirmado: Boolean(reembolso_confirmado),
         reembolsoMetodo: reembolso_metodo || null,
+        reembolsoExcepcional: Boolean(reembolso_excepcional),
+        motivoExcepcional: motivo_excepcional || null,
         canceladoPorUserId: req.user.userId
       });
 
@@ -232,7 +234,8 @@ class ReservaController {
         message: resultado.message,
         reserva: resultado.reserva,
         nota_credito: resultado.nota_credito,
-        monto_reembolsado: resultado.monto_reembolsado
+        monto_reembolsado: resultado.monto_reembolsado,
+        cupon: resultado.cupon
       });
     } catch (err) {
       console.error('Error en cancelarRecepcion:', err);
