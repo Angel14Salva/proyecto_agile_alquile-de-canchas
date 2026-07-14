@@ -520,21 +520,35 @@
       return;
     }
 
-    let montoUsar = parseFloat(inputMonto.value) || 0;
+    const rawVal = inputMonto.value.trim();
+    if (rawVal === '') {
+      cuponClienteAplicado = null;
+      if (slotSeleccionado) {
+        resumenPrecio.textContent = `S/ ${parseFloat(slotSeleccionado.precio).toFixed(2)}`;
+      }
+      desgloseDiv.style.display = 'none';
+      btnConfirmar.textContent = 'Confirmar reserva →';
+      return;
+    }
+
+    let montoUsar = parseFloat(rawVal) || 0;
     const totalReserva = parseFloat(slotSeleccionado?.precio || 0);
 
     if (montoUsar <= 0) {
-      alert('El monto a usar debe ser mayor a 0');
-      checkbox.checked = false;
+      cuponClienteAplicado = null;
+      if (slotSeleccionado) {
+        resumenPrecio.textContent = `S/ ${parseFloat(slotSeleccionado.precio).toFixed(2)}`;
+      }
+      desgloseDiv.style.display = 'none';
+      btnConfirmar.textContent = 'Confirmar reserva →';
       return;
     }
+
     if (montoUsar > cuponClienteVerificado.saldo) {
-      alert('El monto supera el saldo disponible del cupón');
       montoUsar = cuponClienteVerificado.saldo;
       inputMonto.value = montoUsar.toFixed(2);
     }
     if (montoUsar > totalReserva) {
-      alert('El monto supera el precio total de la reserva');
       montoUsar = totalReserva;
       inputMonto.value = montoUsar.toFixed(2);
     }
@@ -733,7 +747,19 @@
           cliente_dni:    dni
         };
 
-        if (cuponClienteAplicado) {
+        const cuponCheckbox = document.getElementById('cuponAplicarCheckbox');
+        if (cuponCheckbox && cuponCheckbox.checked) {
+          const valInput = parseFloat(document.getElementById('cuponMontoCliente').value) || 0;
+          if (valInput <= 0) {
+            alert('Por favor ingrese un monto de cupón válido mayor a S/ 0.00');
+            btn.textContent = 'Confirmar reserva →'; btn.disabled = false;
+            return;
+          }
+          if (!cuponClienteAplicado) {
+            alert('El cupón no ha sido correctamente validado o aplicado');
+            btn.textContent = 'Confirmar reserva →'; btn.disabled = false;
+            return;
+          }
           payload.cupon_codigo = cuponClienteAplicado.codigo;
           payload.cupon_monto_aplicar = cuponClienteAplicado.montoAplicar;
         }
