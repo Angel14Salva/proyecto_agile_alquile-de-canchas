@@ -14,7 +14,7 @@ function renderSidebar(activePage) {
     { page: 'cancelar-reserva', href: 'cancelar-reserva.html',  icon: '❌', label: 'Cancelar reserva',     roles: ['recepcionista'] },
     // Recepcionista
     { page: 'reservas',         href: 'reservas.html',          icon: '📋', label: 'Todas las reservas',   roles: ['recepcionista'] },
-    { page: 'recepcion',        href: 'recepcion.html',         icon: '🏢', label: 'Recepción',            roles: ['recepcionista'] },
+    { page: 'recepcion',        href: 'recepcion.html',         icon: '💵', label: 'Control de caja',      roles: ['recepcionista', 'admin'] },
     // Gerente
     { page: 'dashboard',        href: 'dashboard.html',         icon: '📊', label: 'Panel de informes',    roles: ['admin'] },
     { page: 'admin-export',     href: 'admin.html#informes',    icon: '📤', label: 'Exportar informes',    roles: ['admin'] },
