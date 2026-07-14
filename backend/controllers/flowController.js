@@ -185,7 +185,8 @@ async function confirmarPendientePorToken(token) {
 class FlowController {
   // Ya NO crea la reserva. Solo valida disponibilidad + guarda los datos como
   // "pendiente de pago" y abre la orden en Flow. La reserva se crea recien
-  // cuando el pago se confirma (ver confirmarPendientePorT  async crear(req, res) {
+  // cuando el pago se confirma (ver confirmarPendientePorToken).
+  async crear(req, res) {
     const { cancha_id, fecha, hora_inicio, hora_fin, notas, cliente_nombre, cliente_dni, cupon_codigo, cupon_monto_aplicar } = req.body;
     const usuario_id = req.user.userId;
 
