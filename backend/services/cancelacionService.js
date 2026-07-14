@@ -149,16 +149,17 @@ class CancelacionService {
       let cupon = null;
 
       if (tienePagoRegistrado(reserva.pago_estado, reserva.pago_monto)) {
-        let reembolsoMetodo = opciones.reembolsoMetodo || null;
-        if (opciones.reembolsoExcepcional) {
-          reembolsoMetodo = 'cupon';
-          cupon = await cuponService.generarCupon(conn, {
-            monto: infoPago.montoReembolsar,
-            motivo: opciones.motivoExcepcional,
-            reservaOrigenId: reservaId,
-            generadoPor: opciones.canceladoPorUserId
-          });
-        }
+        const reembolsoMetodo = 'cupon';
+        const motivo = opciones.reembolsoExcepcional
+          ? opciones.motivoExcepcional
+          : 'Cancelación con más de 2 horas de anticipación';
+
+        cupon = await cuponService.generarCupon(conn, {
+          monto: infoPago.montoReembolsar,
+          motivo: motivo,
+          reservaOrigenId: reservaId,
+          generadoPor: opciones.canceladoPorUserId
+        });
 
         await conn.query(
           `UPDATE pagos

@@ -48,35 +48,31 @@
 
         <!-- Bloque Reembolso Normal (> 2h) -->
         <div id="bloqueReembolsoNormal" style="display:none">
-          <div class="card-title" style="margin-top:8px">💸 Reembolso Normal</div>
+          <div class="card-title" style="margin-top:8px">💸 Reembolso de Reserva</div>
           <p style="font-size:13px;color:var(--gray-text);margin-bottom:12px">
-            Esta reserva tiene pago registrado. Confirme que el reembolso fue entregado al cliente antes de cancelar.
+            Esta reserva califica para reembolso automático mediante cupón de saldo. Al cancelar, se generará un cupón por el total de <strong class="montoReembolsoLabel">S/ 0.00</strong>.
           </p>
-          <div class="form-group">
-            <label>Método de reembolso entregado</label>
-            <select id="reembolsoMetodo">
-              <option value="">— Seleccione —</option>
-              <option value="efectivo">💵 Efectivo</option>
-              <option value="transferencia">🏦 Transferencia</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
-              <input type="checkbox" id="reembolsoConfirmado" style="width: auto; margin: 0">
-              Confirmo que el reembolso de <strong class="montoReembolsoLabel">S/ 0.00</strong> fue entregado al cliente
-            </label>
-          </div>
         </div>
 
-        <!-- Bloque Reembolso Excepcional (<= 2h) -->
+        <!-- Bloque Reembolso Excepcional (<= 2h o vencida) -->
         <div id="bloqueReembolsoExcepcional" style="display:none">
           <div class="card-title" style="margin-top:8px;color:#c0392b">⚠️ Reembolso Excepcional</div>
           <p style="font-size:13px;color:var(--gray-text);margin-bottom:12px">
-            Faltan 2 horas o menos para el inicio de la reserva. El reembolso directo en efectivo/transferencia está bloqueado. Se generará un cupón de reembolso.
+            Faltan 2 horas o menos, o la fecha de la reserva ya pasó. Seleccione el motivo excepcional para validar el reembolso en cupón:
           </p>
           <div class="form-group">
-            <label style="font-weight:bold">Motivo obligatorio del reembolso excepcional (mínimo 15 caracteres)</label>
-            <textarea id="motivoExcepcional" rows="3" style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:4px;border:1px solid var(--gray-border)" placeholder="Escriba el motivo detallado de la cancelación excepcional..."></textarea>
+            <label style="font-weight:bold">Motivo de reembolso excepcional</label>
+            <select id="motivoExcepcionalSelect" onchange="toggleMotivoEspecifico()" style="margin-top:4px;padding:8px;border-radius:4px;border:1px solid var(--gray-border)">
+              <option value="El local no abrió">🏢 El local no abrió</option>
+              <option value="La cancha estaba en mal estado">⚽ La cancha estaba en mal estado</option>
+              <option value="Corte de fluido eléctrico / iluminación">💡 Corte de fluido eléctrico / iluminación</option>
+              <option value="Caso fortuito o fuerza mayor">⛈️ Caso fortuito o fuerza mayor</option>
+              <option value="otro">✏️ Otro motivo (especificar)</option>
+            </select>
+          </div>
+          <div class="form-group" id="bloqueEspecificarMotivo" style="display:none">
+            <label style="font-weight:bold">Especifique el motivo</label>
+            <textarea id="motivoExcepcionalEspecifico" rows="2" style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:4px;border:1px solid var(--gray-border)" placeholder="Escriba detalladamente el motivo..."></textarea>
           </div>
         </div>
 
@@ -199,7 +195,6 @@
       btnCancelar.disabled = false;
       btnCancelar.textContent = 'Cancelar reserva';
       if (r.requiere_reembolso) {
-        // Calcular anticipación (comparando en UTC o local simple para estimar)
         const reservaFechaHora = new Date(String(r.fecha).substring(0, 10) + 'T' + String(r.hora_inicio).substring(0, 5));
         const ahora = new Date();
         const diffHoras = (reservaFechaHora.getTime() - ahora.getTime()) / 1000 / 60 / 60;
@@ -208,12 +203,12 @@
           bloqueReembolsoNormal.style.display = 'block';
           bloqueReembolsoExcepcional.style.display = 'none';
           document.querySelectorAll('.montoReembolsoLabel').forEach(el => el.textContent = `S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}`);
-          document.getElementById('reembolsoConfirmado').checked = false;
-          document.getElementById('reembolsoMetodo').value = '';
         } else {
           bloqueReembolsoNormal.style.display = 'none';
           bloqueReembolsoExcepcional.style.display = 'block';
-          document.getElementById('motivoExcepcional').value = '';
+          document.getElementById('motivoExcepcionalSelect').value = 'El local no abrió';
+          document.getElementById('bloqueEspecificarMotivo').style.display = 'none';
+          document.getElementById('motivoExcepcionalEspecifico').value = '';
         }
       } else {
         bloqueReembolsoNormal.style.display = 'none';
@@ -223,6 +218,14 @@
 
     cardDetalle.style.display = 'block';
     cardDetalle.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function toggleMotivoEspecifico() {
+    const val = document.getElementById('motivoExcepcionalSelect').value;
+    document.getElementById('bloqueEspecificarMotivo').style.display = val === 'otro' ? 'block' : 'none';
+    if (val === 'otro') {
+      document.getElementById('motivoExcepcionalEspecifico').value = '';
+    }
   }
 
   function limpiarSeleccion() {
@@ -255,31 +258,25 @@
       const diffHoras = (reservaFechaHora.getTime() - ahora.getTime()) / 1000 / 60 / 60;
 
       if (diffHoras > 2) {
-        payload.reembolso_confirmado = document.getElementById('reembolsoConfirmado').checked;
-        payload.reembolso_metodo = document.getElementById('reembolsoMetodo').value;
-        if (!payload.reembolso_confirmado) {
-          mostrarAlerta('Debe confirmar que el reembolso fue entregado al cliente', 'error');
-          return;
-        }
-        if (!payload.reembolso_metodo) {
-          mostrarAlerta('Seleccione el método de reembolso entregado', 'error');
-          return;
-        }
+        payload.reembolso_confirmado = true;
       } else {
         esExcepcional = true;
         payload.reembolso_excepcional = true;
-        payload.motivo_excepcional = document.getElementById('motivoExcepcional').value.trim();
-        if (!payload.motivo_excepcional || payload.motivo_excepcional.length < 15) {
-          mostrarAlerta('Debe ingresar un motivo de al menos 15 caracteres para el reembolso excepcional', 'error');
-          return;
+        const selVal = document.getElementById('motivoExcepcionalSelect').value;
+        if (selVal === 'otro') {
+          payload.motivo_excepcional = document.getElementById('motivoExcepcionalEspecifico').value.trim();
+          if (!payload.motivo_excepcional || payload.motivo_excepcional.length < 5) {
+            mostrarAlerta('Debe especificar un motivo de al menos 5 caracteres', 'error');
+            return;
+          }
+        } else {
+          payload.motivo_excepcional = selVal;
         }
       }
     }
 
     const msg = r.requiere_reembolso
-      ? (esExcepcional 
-          ? `¿Cancelar la reserva ${r.codigo} generando un cupón de reembolso excepcional por S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`
-          : `¿Cancelar la reserva ${r.codigo} y registrar reembolso en mano de S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`)
+      ? `¿Cancelar la reserva ${r.codigo} generando un cupón de reembolso por S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`
       : `¿Cancelar la reserva ${r.codigo}?`;
 
     if (!confirm(msg)) return;

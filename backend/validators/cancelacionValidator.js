@@ -4,7 +4,7 @@ const { horasHastaReserva } = require('../services/tiempoHelper');
 
 const METODOS_REEMBOLSO = ['efectivo', 'transferencia'];
 
-function validarCancelacionRecepcion({ reserva, infoPago, reembolsoConfirmado, reembolsoMetodo, reembolsoExcepcional, motivoExcepcional }) {
+function validarCancelacionRecepcion({ reserva, infoPago, reembolsoExcepcional, motivoExcepcional }) {
   if (!reserva) {
     return { valido: false, error: 'Reserva no encontrada', status: 404 };
   }
@@ -20,41 +20,11 @@ function validarCancelacionRecepcion({ reserva, infoPago, reembolsoConfirmado, r
   if (infoPago.requiereReembolso) {
     const diffHoras = horasHastaReserva(reserva.fecha, reserva.hora_inicio);
 
-    if (diffHoras > 2) {
-      if (reembolsoExcepcional) {
+    if (diffHoras <= 2) {
+      if (!motivoExcepcional || motivoExcepcional.trim().length < 3) {
         return {
           valido: false,
-          error: 'No se puede aplicar un reembolso excepcional si la reserva tiene más de 2 horas de anticipación',
-          status: 400
-        };
-      }
-      if (!reembolsoConfirmado) {
-        return {
-          valido: false,
-          error: 'Debe confirmar que el reembolso fue entregado al cliente antes de cancelar',
-          status: 400
-        };
-      }
-      if (!reembolsoMetodo || !METODOS_REEMBOLSO.includes(reembolsoMetodo)) {
-        return {
-          valido: false,
-          error: 'Seleccione el metodo de reembolso: efectivo o transferencia',
-          status: 400
-        };
-      }
-    } else {
-      // Menos de 2 horas
-      if (!reembolsoExcepcional) {
-        return {
-          valido: false,
-          error: 'El reembolso directo está bloqueado para cancelaciones con 2 horas o menos de anticipación. Debe marcar Reembolso Excepcional.',
-          status: 400
-        };
-      }
-      if (!motivoExcepcional || motivoExcepcional.trim().length < 15) {
-        return {
-          valido: false,
-          error: 'El motivo del reembolso excepcional es obligatorio y debe tener al menos 15 caracteres',
+          error: 'Debe seleccionar o ingresar el motivo excepcional de reembolso',
           status: 400
         };
       }
