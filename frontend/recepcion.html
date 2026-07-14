@@ -78,7 +78,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">🏢 Check-in y cobro</div>
+        <div class="card-title">🏢 Check-in</div>
         <div class="form-group">
           <label>Buscar por nombre, DNI, email o código</label>
           <div class="input-group">
@@ -239,22 +239,26 @@
   function mostrarCheckIn(r) {
     reservaCheckIn = r;
     document.getElementById('checkinDetalle').style.display = 'block';
+
+    const reservaFechaHora = new Date(String(r.fecha).substring(0, 10) + 'T' + String(r.hora_inicio).substring(0, 5));
+    const ahora = new Date();
+    const haPasado = reservaFechaHora < ahora;
+
+    let alertTimeHtml = '';
+    if (haPasado) {
+      alertTimeHtml = `<div style="background:#feebee;color:#c62828;border:1px solid #ffcdd2;padding:8px 12px;border-radius:6px;margin-top:10px;font-weight:bold;font-size:12px;display:inline-block">⚠️ La reserva ya pasó con respecto a la hora de consulta</div>`;
+    } else {
+      alertTimeHtml = `<div style="background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;padding:8px 12px;border-radius:6px;margin-top:10px;font-weight:bold;font-size:12px;display:inline-block">✅ Esta reserva está vigente / próxima</div>`;
+    }
+
     document.getElementById('checkinInfo').innerHTML = `
       <strong>${r.codigo}</strong> · ${r.cancha_nombre}<br>
       Cliente: ${r.cliente_nombre} · ${String(r.fecha).substring(0,10)} ${String(r.hora_inicio).substring(0,5)}<br>
       Total: S/ ${parseFloat(r.precio_hora).toFixed(2)} · Pagado: S/ ${parseFloat(r.pago_monto||0).toFixed(2)} ·
-      Estado pago: <strong>${r.pago_estado}</strong>${r.saldo_pendiente > 0 ? ` · Saldo: S/ ${r.saldo_pendiente.toFixed(2)}` : ''}`;
+      Estado pago: <strong>${r.pago_estado}</strong>${r.saldo_pendiente > 0 ? ` · Saldo: S/ ${r.saldo_pendiente.toFixed(2)}` : ''}<br>
+      ${alertTimeHtml}`;
 
-    const acc = document.getElementById('checkinAcciones');
-    if (r.puede_confirmar_ingreso) {
-      acc.innerHTML = `<button class="btn-primary" onclick="confirmarIngreso(${r.id})">✅ Confirmar ingreso</button>`;
-    } else if (r.puede_cobrar) {
-      acc.innerHTML = `
-        <p style="font-size:12px;margin-bottom:8px">Cobrar saldo pendiente: <strong>S/ ${r.saldo_pendiente.toFixed(2)}</strong></p>
-        <button class="btn-primary" onclick="cobrarSaldo(${r.id}, ${r.saldo_pendiente})">💵 Cobrar saldo</button>`;
-    } else {
-      acc.innerHTML = `<span class="badge badge-amber">Sin acciones disponibles</span>`;
-    }
+    document.getElementById('checkinAcciones').innerHTML = '';
   }
 
   async function confirmarIngreso(id) {

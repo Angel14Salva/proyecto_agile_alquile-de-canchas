@@ -90,13 +90,6 @@
       ══════════════════════════════════════════════════════════════ -->
       <div id="panelRecepcionista" style="display:none">
 
-        <div class="grid4" style="margin-bottom:16px">
-          <div class="metric"><div class="metric-val" id="rReservasHoy">—</div><div class="metric-lbl">Reservas hoy</div><div class="metric-tag">Hoy</div></div>
-          <div class="metric"><div class="metric-val" id="rIngresos">—</div><div class="metric-lbl">Ingresos hoy</div><div class="metric-tag">Estimado</div></div>
-          <div class="metric"><div class="metric-val" id="rCanchas">—</div><div class="metric-lbl">Canchas activas</div></div>
-          <div class="metric"><div class="metric-val" id="rPendientes">—</div><div class="metric-lbl">Pendientes pago</div></div>
-        </div>
-
         <div class="grid2" style="margin-bottom:16px">
           <div class="card">
             <div class="card-title">📋 Reservas de hoy</div>
@@ -344,11 +337,6 @@
       const pendientes = reservas.filter(r => r.pago_estado !== 'pagado');
       const ingresos   = reservas.filter(r => r.pago_estado === 'pagado')
         .reduce((s,r) => s + parseFloat(r.precio_hora||0), 0);
-
-      document.getElementById('rReservasHoy').textContent = reservas.length;
-      document.getElementById('rPendientes').textContent  = pendientes.length;
-      document.getElementById('rIngresos').textContent    = `S/ ${ingresos.toFixed(2)}`;
-      document.getElementById('rCanchas').textContent     = canchas.length;
 
       document.getElementById('rTablaReservas').innerHTML = reservas.length === 0
         ? '<div class="empty"><div class="empty-icon">📭</div>No hay reservas para hoy</div>'
