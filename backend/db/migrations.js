@@ -208,6 +208,7 @@ async function runMigrations() {
     `CREATE INDEX IF NOT EXISTS idx_cupones_estado ON cupones(estado)`,
     `ALTER TABLE reservas_pendientes_pago ADD COLUMN IF NOT EXISTS cupon_codigo VARCHAR(20) NULL`,
     `ALTER TABLE reservas_pendientes_pago ADD COLUMN IF NOT EXISTS cupon_monto DECIMAL(8,2) NULL`,
+    `ALTER TABLE reservas DROP INDEX uq_cancha_slot`
   ];
 
   for (const sql of migrations) {
