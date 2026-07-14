@@ -126,6 +126,19 @@
                 <button type="button" class="btn-primary" onclick="verificarCuponCliente()" style="margin:0;padding:6px 12px;font-size:12px">Verificar</button>
               </div>
               <div id="infoCuponCliente" style="display:none;font-size:12px;margin-top:4px;padding:8px;border-radius:4px"></div>
+              
+              <!-- Bloque para aplicar cupón verificado -->
+              <div id="bloqueAplicacionCupon" style="display:none;margin-top:10px;background:#e8f5e9;padding:12px;border-radius:8px;border:1px solid #c8e6c9">
+                <div style="font-size:12px;color:#2e7d32;margin-bottom:8px;font-weight:bold" id="labelSaldoDisponible">Saldo disponible: S/ 0.00</div>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                  <label style="font-size:12px;font-weight:normal;color:#333;margin:0;width:auto">Monto a usar (S/):</label>
+                  <input type="text" id="cuponMontoCliente" placeholder="Ej: 50.00" style="width:100px;padding:4px 8px" oninput="this.value=this.value.replace(/[^\\d.]/g,'');actualizarAplicacionCuponCliente()">
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:bold;color:#1b5e20;cursor:pointer;width:auto;margin:0">
+                  <input type="checkbox" id="cuponAplicarCheckbox" style="width:auto;margin:0" onchange="actualizarAplicacionCuponCliente()">
+                  ☑️ Aplicar descuento de cupón
+                </label>
+              </div>
             </div>
           </div>
 
@@ -422,6 +435,7 @@
       if (horasOcupadas.has(h + 1) || horasOcupadas.has(h)) break;
     }
   }
+  let cuponClienteVerificado = null;
   let cuponClienteAplicado = null;
 
   function actualizarPrecioResumen() {
@@ -431,18 +445,29 @@
     document.getElementById('desgloseCuponCliente').style.display = 'none';
     document.getElementById('btnConfirmar').textContent = 'Confirmar reserva →';
     cuponClienteAplicado = null;
+    cuponClienteVerificado = null;
+
     const infoCupon = document.getElementById('infoCuponCliente');
     if (infoCupon) infoCupon.style.display = 'none';
     const codeInput = document.getElementById('cuponCodigoCliente');
     if (codeInput) codeInput.value = '';
+
+    const bloque = document.getElementById('bloqueAplicacionCupon');
+    if (bloque) bloque.style.display = 'none';
+    const checkbox = document.getElementById('cuponAplicarCheckbox');
+    if (checkbox) checkbox.checked = false;
   }
 
   async function verificarCuponCliente() {
     const codigo = document.getElementById('cuponCodigoCliente').value.trim();
     const infoDiv = document.getElementById('infoCuponCliente');
-    const desgloseDiv = document.getElementById('desgloseCuponCliente');
-    const btnConfirmar = document.getElementById('btnConfirmar');
-    const resumenPrecio = document.getElementById('resumenPrecio');
+    const bloque = document.getElementById('bloqueAplicacionCupon');
+
+    infoDiv.style.display = 'none';
+    bloque.style.display = 'none';
+    document.getElementById('cuponAplicarCheckbox').checked = false;
+    cuponClienteVerificado = null;
+    actualizarPrecioResumen();
 
     if (!codigo) {
       alert('Por favor ingrese el código del cupón');
@@ -453,44 +478,84 @@
       infoDiv.style.display = 'block';
       infoDiv.style.color = 'var(--gray-text)';
       infoDiv.textContent = 'Verificando...';
-      desgloseDiv.style.display = 'none';
-      cuponClienteAplicado = null;
 
       const cupon = await api.get(`/api/cupones/${encodeURIComponent(codigo)}`);
 
       if (cupon.estado !== 'activo' || cupon.saldo <= 0) {
         infoDiv.style.color = 'var(--red, #c0392b)';
         infoDiv.textContent = `El cupón no está disponible (Estado: ${cupon.estado})`;
-        actualizarPrecioResumen();
       } else {
-        infoDiv.style.color = '#2e7d32';
-        infoDiv.textContent = `Saldo disponible: S/ ${parseFloat(cupon.saldo).toFixed(2)}`;
+        infoDiv.style.display = 'none';
+        cuponClienteVerificado = cupon;
 
+        // Show block
+        bloque.style.display = 'block';
+        document.getElementById('labelSaldoDisponible').textContent = `Saldo disponible: S/ ${parseFloat(cupon.saldo).toFixed(2)}`;
+
+        // Default amount to use: the minimum of coupon balance or reservation total price
         const totalReserva = parseFloat(slotSeleccionado?.precio || 0);
-        const montoAplicar = Math.min(cupon.saldo, totalReserva);
-        const restante = Math.max(0, totalReserva - montoAplicar);
-
-        cuponClienteAplicado = {
-          codigo: cupon.codigo,
-          saldo: cupon.saldo,
-          montoAplicar
-        };
-
-        desgloseDiv.style.display = 'block';
-        desgloseDiv.textContent = `Cupón: -S/ ${montoAplicar.toFixed(2)}`;
-        
-        if (restante === 0) {
-          resumenPrecio.textContent = 'S/ 0.00';
-          btnConfirmar.textContent = 'Confirmar reserva con Cupón';
-        } else {
-          resumenPrecio.textContent = `S/ ${restante.toFixed(2)}`;
-          btnConfirmar.textContent = 'Pagar restante en Flow →';
-        }
+        const montoUsar = Math.min(cupon.saldo, totalReserva);
+        document.getElementById('cuponMontoCliente').value = montoUsar.toFixed(2);
       }
     } catch (err) {
       infoDiv.style.color = 'var(--red, #c0392b)';
       infoDiv.textContent = err.message || 'Cupón no encontrado';
-      actualizarPrecioResumen();
+    }
+  }
+
+  function actualizarAplicacionCuponCliente() {
+    const checkbox = document.getElementById('cuponAplicarCheckbox');
+    const inputMonto = document.getElementById('cuponMontoCliente');
+    const desgloseDiv = document.getElementById('desgloseCuponCliente');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const resumenPrecio = document.getElementById('resumenPrecio');
+
+    if (!checkbox.checked || !cuponClienteVerificado) {
+      cuponClienteAplicado = null;
+      if (slotSeleccionado) {
+        resumenPrecio.textContent = `S/ ${parseFloat(slotSeleccionado.precio).toFixed(2)}`;
+      }
+      desgloseDiv.style.display = 'none';
+      btnConfirmar.textContent = 'Confirmar reserva →';
+      return;
+    }
+
+    let montoUsar = parseFloat(inputMonto.value) || 0;
+    const totalReserva = parseFloat(slotSeleccionado?.precio || 0);
+
+    if (montoUsar <= 0) {
+      alert('El monto a usar debe ser mayor a 0');
+      checkbox.checked = false;
+      return;
+    }
+    if (montoUsar > cuponClienteVerificado.saldo) {
+      alert('El monto supera el saldo disponible del cupón');
+      montoUsar = cuponClienteVerificado.saldo;
+      inputMonto.value = montoUsar.toFixed(2);
+    }
+    if (montoUsar > totalReserva) {
+      alert('El monto supera el precio total de la reserva');
+      montoUsar = totalReserva;
+      inputMonto.value = montoUsar.toFixed(2);
+    }
+
+    const restante = Math.max(0, totalReserva - montoUsar);
+
+    cuponClienteAplicado = {
+      codigo: cuponClienteVerificado.codigo,
+      saldo: cuponClienteVerificado.saldo,
+      montoAplicar: montoUsar
+    };
+
+    desgloseDiv.style.display = 'block';
+    desgloseDiv.textContent = `Cupón: -S/ ${montoUsar.toFixed(2)}`;
+
+    if (restante === 0) {
+      resumenPrecio.textContent = 'S/ 0.00';
+      btnConfirmar.textContent = 'Confirmar reserva con Cupón';
+    } else {
+      resumenPrecio.textContent = `S/ ${restante.toFixed(2)}`;
+      btnConfirmar.textContent = 'Pagar restante en Flow →';
     }
   }
 
