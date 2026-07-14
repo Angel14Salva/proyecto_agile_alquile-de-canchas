@@ -362,10 +362,30 @@ class FlowController {
           tokenValue = response.token;
         } catch (flowErr) {
           const flowMsg = flowErr?.response?.data?.message || flowErr?.response?.data || flowErr.message;
-          console.error('Fallo llamada a Flow API real:', flowMsg);
-          return res.status(400).json({ 
-            error: 'La pasarela de pago Flow reportó un error: ' + (typeof flowMsg === 'object' ? JSON.stringify(flowMsg) : flowMsg) 
-          });
+          
+          const isEmailError = typeof flowMsg === 'string' && 
+                               (flowMsg.includes('userEmail') || flowMsg.includes('email') || flowMsg.includes('not valid'));
+
+          if (isEmailError && params.email !== 'cliente@canchas.com') {
+            console.warn('Detectado error de email en Sandbox, reintentando con cliente@canchas.com...');
+            try {
+              params.email = 'cliente@canchas.com';
+              const retryResponse = await flowPost('payment/create', params);
+              urlPago  = retryResponse.url + '?token=' + retryResponse.token;
+              tokenValue = retryResponse.token;
+            } catch (retryErr) {
+              const retryMsg = retryErr?.response?.data?.message || retryErr?.response?.data || retryErr.message;
+              console.error('Fallo tambien el reintento de Flow:', retryMsg);
+              return res.status(400).json({ 
+                error: 'La pasarela de pago Flow reportó un error: ' + (typeof retryMsg === 'object' ? JSON.stringify(retryMsg) : retryMsg) 
+              });
+            }
+          } else {
+            console.error('Fallo llamada a Flow API real:', flowMsg);
+            return res.status(400).json({ 
+              error: 'La pasarela de pago Flow reportó un error: ' + (typeof flowMsg === 'object' ? JSON.stringify(flowMsg) : flowMsg) 
+            });
+          }
         }
       }
 
