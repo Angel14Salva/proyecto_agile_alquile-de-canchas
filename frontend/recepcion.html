@@ -51,12 +51,8 @@
               <div style="font-size:18px;font-weight:700;color:#16a34a" id="cajaEfectivoEnCaja">S/ 0.00</div>
             </div>
             <div style="background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:10px">
-              <div style="font-size:11px;color:var(--gray-muted)">💚 Yape (verificado)</div>
-              <div style="font-size:16px;font-weight:600" id="cajaTotalYape">S/ 0.00</div>
-            </div>
-            <div style="background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:10px">
-              <div style="font-size:11px;color:var(--gray-muted)">🏦 Transferencia (verificado)</div>
-              <div style="font-size:16px;font-weight:600" id="cajaTotalTransferencia">S/ 0.00</div>
+              <div style="font-size:11px;color:var(--gray-muted)">📱 Digital (verificado)</div>
+              <div style="font-size:16px;font-weight:600" id="cajaTotalDigital">S/ 0.00</div>
             </div>
             <div style="background:#f8f9fa;border:1px solid var(--gray-border);border-radius:8px;padding:10px">
               <div style="font-size:11px;color:var(--gray-muted)">Abierta por / desde</div>
@@ -174,8 +170,7 @@
       const c = estado.caja;
       document.getElementById('cajaAbiertaBox').style.display = 'block';
       document.getElementById('cajaEfectivoEnCaja').textContent = 'S/ ' + c.efectivo_en_caja.toFixed(2);
-      document.getElementById('cajaTotalYape').textContent = 'S/ ' + (c.totales.yape + c.totales.plin).toFixed(2);
-      document.getElementById('cajaTotalTransferencia').textContent = 'S/ ' + c.totales.transferencia.toFixed(2);
+      document.getElementById('cajaTotalDigital').textContent = 'S/ ' + (c.totales.yape + c.totales.plin + c.totales.transferencia + c.totales.tarjeta).toFixed(2);
       const fecha = new Date(c.abierta_at).toLocaleString('es-PE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
       document.getElementById('cajaInfoApertura').textContent = c.abierta_por + ' · ' + fecha;
     } catch (err) {

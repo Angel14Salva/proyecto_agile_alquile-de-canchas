@@ -62,7 +62,7 @@ function ingresosPorCancha(reservas) {
 function controlCajaRecepcionistas(movimientos, turnos = []) {
   const map = {};
   const getOrCreate = (nombre) => {
-    if (!map[nombre]) map[nombre] = { efectivo: 0, digital: 0, total: 0, count: 0, monto_inicial: 0, total_esperado: 0 };
+    if (!map[nombre]) map[nombre] = { efectivo: 0, digital: 0, total: 0, count: 0, monto_inicial: 0, total_esperado: 0, total_contado: 0 };
     return map[nombre];
   };
 
@@ -79,6 +79,9 @@ function controlCajaRecepcionistas(movimientos, turnos = []) {
     const d = getOrCreate(t.recepcionista_nombre || 'Sin asignar');
     d.monto_inicial += parseFloat(t.monto_inicial || 0);
     d.total_esperado += parseFloat(t.efectivo_esperado || 0);
+    // El contado solo existe una vez que el turno se cerro (antes no se ha
+    // hecho el conteo fisico todavia).
+    if (t.estado === 'cerrada') d.total_contado += parseFloat(t.efectivo_contado || 0);
   });
 
   return Object.entries(map).map(([nombre, d]) => ({
@@ -88,7 +91,8 @@ function controlCajaRecepcionistas(movimientos, turnos = []) {
     total: Math.round(d.total * 100) / 100,
     cobros: d.count,
     monto_inicial: Math.round(d.monto_inicial * 100) / 100,
-    total_esperado: Math.round(d.total_esperado * 100) / 100
+    total_esperado: Math.round(d.total_esperado * 100) / 100,
+    total_contado: Math.round(d.total_contado * 100) / 100
   }));
 }
 

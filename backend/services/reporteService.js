@@ -67,7 +67,7 @@ class ReporteService {
     const [movimientos] = await db.query(sqlMov, paramsMov);
 
     let sqlTurnos = `
-      SELECT ct.id, ct.estado, ct.monto_inicial, ct.efectivo_esperado, ur.nombre AS recepcionista_nombre
+      SELECT ct.id, ct.estado, ct.monto_inicial, ct.efectivo_esperado, ct.efectivo_contado, ur.nombre AS recepcionista_nombre
       FROM caja_turnos ct
       JOIN usuarios ur ON ct.abierta_por = ur.id
       WHERE DATE(ct.abierta_at) BETWEEN ? AND ?`;
