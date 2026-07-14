@@ -113,10 +113,19 @@
 
           <div id="panelPagoOnline" style="background:#f8f9fa;border-radius:12px;padding:16px;margin-bottom:16px">
             <p style="font-weight:700;margin:0 0 10px;font-size:14px">Medios de pago disponibles:</p>
-            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#444">
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#444;margin-bottom:16px">
               <div>💳 Tarjetas de crédito y débito (Visa, Mastercard)</div>
               <div>📱 Billeteras electrónicas: Yape, Plin y otras</div>
               <div>🏪 Banca móvil, agentes y bodegas (PagoEfectivo)</div>
+            </div>
+            
+            <div style="border-top:1px solid var(--gray-border,#e0e0e0);padding-top:12px">
+              <p style="font-weight:700;margin:0 0 8px;font-size:13px">🎫 ¿Tienes un cupón de reembolso?</p>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input type="text" id="cuponCodigoCliente" placeholder="Ej: CUP-XXXXXX" style="flex:1">
+                <button type="button" class="btn-primary" onclick="verificarCuponCliente()" style="margin:0;padding:6px 12px;font-size:12px">Verificar</button>
+              </div>
+              <div id="infoCuponCliente" style="display:none;font-size:12px;margin-top:4px;padding:8px;border-radius:4px"></div>
             </div>
           </div>
 
@@ -154,7 +163,10 @@
               <div style="font-size:12px;color:var(--gray-text);margin-top:2px" id="resumenFechaHora">—</div>
             </div>
             <div style="display:flex;align-items:center;gap:16px">
-              <div class="resumen-price" id="resumenPrecio">S/ —</div>
+              <div style="text-align:right">
+                <div class="resumen-price" id="resumenPrecio">S/ —</div>
+                <div id="desgloseCuponCliente" style="display:none;font-size:11px;color:#2e7d32;margin-top:2px;font-weight:bold"></div>
+              </div>
               <button class="btn-primary" onclick="confirmarReserva()" id="btnConfirmar">
                 Confirmar reserva →
               </button>
@@ -227,9 +239,16 @@
         <option value="yape">💚 Yape</option>
         <option value="plin">💙 Plin</option>
         <option value="transferencia">🏦 Transferencia</option>
+        <option value="cupon">🎫 Cupón</option>
       </select>
       <input type="text" id="lineaMonto${id}" placeholder="Monto S/" style="width:110px" oninput="this.value=this.value.replace(/[^\\d.]/g,'');actualizarTotalPago()">
-      <input type="text" id="lineaReferencia${id}" placeholder="N° operación" style="flex:1;display:none">
+      <div style="display:flex;flex-direction:column;flex:1;gap:4px">
+        <div style="display:flex;gap:4px">
+          <input type="text" id="lineaReferencia${id}" placeholder="N° operación" style="flex:1;display:none">
+          <button type="button" id="btnVerificarCupon${id}" class="btn-primary" onclick="verificarCuponLinea(${id})" style="display:none;margin:0;padding:4px 8px;font-size:12px">Verificar</button>
+        </div>
+        <div id="infoCupon${id}" style="display:none;font-size:11px;color:#2e7d32;margin-top:2px"></div>
+      </div>
       ${contadorLineaPago > 1 ? `<button type="button" class="btn-secondary" onclick="quitarLineaPago(${id})">✕</button>` : ''}
     `;
     document.getElementById('lineasPago').appendChild(div);
@@ -244,7 +263,24 @@
 
   function toggleReferenciaLinea(id) {
     const metodo = document.getElementById('lineaMetodo' + id).value;
-    document.getElementById('lineaReferencia' + id).style.display = ['yape','plin','transferencia'].includes(metodo) ? 'block' : 'none';
+    const refInput = document.getElementById('lineaReferencia' + id);
+    const verifBtn = document.getElementById('btnVerificarCupon' + id);
+    const infoCupon = document.getElementById('infoCupon' + id);
+
+    if (metodo === 'cupon') {
+      refInput.style.display = 'block';
+      refInput.placeholder = 'Código del cupón';
+      if (verifBtn) verifBtn.style.display = 'inline-block';
+    } else if (['yape','plin','transferencia'].includes(metodo)) {
+      refInput.style.display = 'block';
+      refInput.placeholder = 'N° operación';
+      if (verifBtn) verifBtn.style.display = 'none';
+      if (infoCupon) infoCupon.style.display = 'none';
+    } else {
+      refInput.style.display = 'none';
+      if (verifBtn) verifBtn.style.display = 'none';
+      if (infoCupon) infoCupon.style.display = 'none';
+    }
   }
 
   function actualizarTotalPago() {
@@ -361,6 +397,117 @@
       if (horasOcupadas.has(h + 1) || horasOcupadas.has(h)) break;
     }
   }
+  let cuponClienteAplicado = null;
+
+  function actualizarPrecioResumen() {
+    if (slotSeleccionado) {
+      document.getElementById('resumenPrecio').textContent = `S/ ${parseFloat(slotSeleccionado.precio).toFixed(2)}`;
+    }
+    document.getElementById('desgloseCuponCliente').style.display = 'none';
+    document.getElementById('btnConfirmar').textContent = 'Confirmar reserva →';
+    cuponClienteAplicado = null;
+    const infoCupon = document.getElementById('infoCuponCliente');
+    if (infoCupon) infoCupon.style.display = 'none';
+    const codeInput = document.getElementById('cuponCodigoCliente');
+    if (codeInput) codeInput.value = '';
+  }
+
+  async function verificarCuponCliente() {
+    const codigo = document.getElementById('cuponCodigoCliente').value.trim();
+    const infoDiv = document.getElementById('infoCuponCliente');
+    const desgloseDiv = document.getElementById('desgloseCuponCliente');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const resumenPrecio = document.getElementById('resumenPrecio');
+
+    if (!codigo) {
+      alert('Por favor ingrese el código del cupón');
+      return;
+    }
+
+    try {
+      infoDiv.style.display = 'block';
+      infoDiv.style.color = 'var(--gray-text)';
+      infoDiv.textContent = 'Verificando...';
+      desgloseDiv.style.display = 'none';
+      cuponClienteAplicado = null;
+
+      const cupon = await api.get(`/api/cupones/${encodeURIComponent(codigo)}`);
+
+      if (cupon.estado !== 'activo' || cupon.saldo <= 0) {
+        infoDiv.style.color = 'var(--red, #c0392b)';
+        infoDiv.textContent = `El cupón no está disponible (Estado: ${cupon.estado})`;
+        actualizarPrecioResumen();
+      } else {
+        infoDiv.style.color = '#2e7d32';
+        infoDiv.textContent = `Saldo disponible: S/ ${parseFloat(cupon.saldo).toFixed(2)}`;
+
+        const totalReserva = parseFloat(slotSeleccionado?.precio || 0);
+        const montoAplicar = Math.min(cupon.saldo, totalReserva);
+        const restante = Math.max(0, totalReserva - montoAplicar);
+
+        cuponClienteAplicado = {
+          codigo: cupon.codigo,
+          saldo: cupon.saldo,
+          montoAplicar
+        };
+
+        desgloseDiv.style.display = 'block';
+        desgloseDiv.textContent = `Cupón: -S/ ${montoAplicar.toFixed(2)}`;
+        
+        if (restante === 0) {
+          resumenPrecio.textContent = 'S/ 0.00';
+          btnConfirmar.textContent = 'Confirmar reserva con Cupón';
+        } else {
+          resumenPrecio.textContent = `S/ ${restante.toFixed(2)}`;
+          btnConfirmar.textContent = 'Pagar restante en Flow →';
+        }
+      }
+    } catch (err) {
+      infoDiv.style.color = 'var(--red, #c0392b)';
+      infoDiv.textContent = err.message || 'Cupón no encontrado';
+      actualizarPrecioResumen();
+    }
+  }
+
+  async function verificarCuponLinea(id) {
+    const codigo = document.getElementById('lineaReferencia' + id).value.trim();
+    const infoDiv = document.getElementById('infoCupon' + id);
+    const montoInput = document.getElementById('lineaMonto' + id);
+
+    if (!codigo) {
+      alert('Por favor ingrese el código del cupón');
+      return;
+    }
+
+    try {
+      infoDiv.style.display = 'block';
+      infoDiv.style.color = 'var(--gray-muted)';
+      infoDiv.textContent = 'Verificando...';
+
+      const cupon = await api.get(`/api/cupones/${encodeURIComponent(codigo)}`);
+      
+      if (cupon.estado !== 'activo' || cupon.saldo <= 0) {
+        infoDiv.style.color = 'var(--red, #c0392b)';
+        infoDiv.textContent = `Cupón no disponible (Estado: ${cupon.estado})`;
+        montoInput.value = '';
+        actualizarTotalPago();
+      } else {
+        infoDiv.style.color = '#2e7d32';
+        infoDiv.textContent = `Saldo disponible: S/ ${parseFloat(cupon.saldo).toFixed(2)}`;
+        
+        const totalReserva = parseFloat(slotSeleccionado?.precio || 0);
+        const maxAPagar = Math.min(cupon.saldo, totalReserva);
+        montoInput.value = maxAPagar.toFixed(2);
+        actualizarTotalPago();
+      }
+    } catch (err) {
+      infoDiv.style.color = 'var(--red, #c0392b)';
+      infoDiv.textContent = err.message || 'Cupón no encontrado';
+      montoInput.value = '';
+      actualizarTotalPago();
+    }
+  }
+
   function calcularResumen() {
     const ini = document.getElementById('horaInicio').value;
     const fin = document.getElementById('horaFin').value;
@@ -370,31 +517,35 @@
     if (hFin <= hIni) { slotSeleccionado = null; validarDatosCliente(); return; }
     const horas = hFin - hIni;
     const precio = horas * precioHora;
-    slotSeleccionado = ini;
+    slotSeleccionado = { hora: ini, precio, horaInicio: ini, horaFin: fin };
     const canchaOpt = document.querySelector('#cancha option[value="' + document.getElementById('cancha').value + '"]');
     const fecha = document.getElementById('fecha').value;
     document.getElementById('resumenCancha').textContent = canchaOpt?.textContent || '—';
     document.getElementById('resumenFechaHora').textContent = `${fecha} · ${ini} a ${fin} · ${horas} hora${horas>1?'s':''}`;
-    document.getElementById('resumenPrecio').textContent = `S/ ${precio.toFixed(2)}`;
+    
+    actualizarPrecioResumen();
+
     document.getElementById('cardCliente').style.display = 'block';
     document.getElementById('cardPago').style.display = 'none';
     validarDatosCliente();
   }
   function seleccionarSlot(hora) {
-    slotSeleccionado = hora;
+    const canchaId  = document.getElementById('cancha').value;
+    const fecha     = document.getElementById('fecha').value;
+    const canchaOpt = document.querySelector(`#cancha option[value="${canchaId}"]`);
+    const horaFin   = `${String(parseInt(hora.split(':')[0]) + 1).padStart(2,'0')}:00`;
+    const precio    = precioHora;
+
+    slotSeleccionado = { hora, precio, horaInicio: hora, horaFin };
     document.querySelectorAll('.slot').forEach(el => {
       el.classList.remove('selected');
       if (el.textContent.trim() === hora) el.classList.add('selected');
     });
 
-    const canchaId  = document.getElementById('cancha').value;
-    const fecha     = document.getElementById('fecha').value;
-    const canchaOpt = document.querySelector(`#cancha option[value="${canchaId}"]`);
-    const horaFin   = `${String(parseInt(hora.split(':')[0]) + 1).padStart(2,'0')}:00`;
-
     document.getElementById('resumenCancha').textContent    = canchaOpt?.textContent || '—';
     document.getElementById('resumenFechaHora').textContent = `${fecha} · ${hora} a ${horaFin} · 1 hora`;
-    const hIniOld = parseInt(hora.split(':')[0]); const hFinOld = hIniOld + 1; const precioOld = (hFinOld - hIniOld) * precioHora; document.getElementById('resumenPrecio').textContent = `S/ ${precioOld.toFixed(2)}`;
+    
+    actualizarPrecioResumen();
 
     // Mostrar paso de datos del cliente; ocultar pago hasta validar
     document.getElementById('cardCliente').style.display = 'block';
@@ -481,9 +632,8 @@
         document.getElementById('codigoReserva').textContent = `Código: ${reserva.codigo}`;
         document.getElementById('successMsg').classList.remove('hidden');
       } else {
-        // Pago en línea vía pasarela: la reserva NO se crea todavía.
-        // Recién se crea cuando Flow confirme que el pago se completó.
-        const pagoResp = await api.post('/api/pagos/flow/crear', {
+        // Pago en línea vía pasarela: la reserva NO se crea todavía (salvo 100% cupón)
+        const payload = {
           cancha_id:      parseInt(canchaId),
           fecha,
           hora_inicio:    horaInicio,
@@ -491,8 +641,22 @@
           notas:          notas || null,
           cliente_nombre: nombre,
           cliente_dni:    dni
-        });
-        window.location.href = pagoResp.url;
+        };
+
+        if (cuponClienteAplicado) {
+          payload.cupon_codigo = cuponClienteAplicado.codigo;
+          payload.cupon_monto_aplicar = cuponClienteAplicado.montoAplicar;
+        }
+
+        const pagoResp = await api.post('/api/pagos/flow/crear', payload);
+        if (pagoResp.success && pagoResp.codigo) {
+          // Confirmado directamente (100% cupón)
+          document.getElementById('formReserva').style.display = 'none';
+          document.getElementById('codigoReserva').textContent = `Código: ${pagoResp.codigo}`;
+          document.getElementById('successMsg').classList.remove('hidden');
+        } else if (pagoResp.url) {
+          window.location.href = pagoResp.url;
+        }
         return;
       }
 

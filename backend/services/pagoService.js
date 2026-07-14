@@ -4,6 +4,7 @@ const db = require('../db/connection');
 const { validarRegistroPago, validarPagosHibridos } = require('../validators/pagoValidator');
 const comprobanteService = require('./comprobanteService');
 const { enviarConfirmacionPago, enviarBoletaVenta, enviarConfirmacionReserva } = require('./emailService');
+const cuponService = require('./cuponService');
 
 class PagoService {
   calcularSaldo(precioTotal, montoPagado, tipoPago) {
@@ -87,6 +88,14 @@ class PagoService {
       const pagoId = pagoResult.insertId;
 
       for (const linea of validacion.lineas) {
+        if (linea.metodo === 'cupon') {
+          await cuponService.aplicarCupon(conn, {
+            codigo: linea.referencia,
+            montoSolicitado: linea.monto,
+            reservaId,
+            registradoPor: usuarioId
+          });
+        }
         await conn.query(
           `INSERT INTO pagos_movimientos (pago_id, caja_turno_id, metodo, monto, referencia, registrado_por)
            VALUES (?, ?, ?, ?, ?, ?)`,
@@ -199,6 +208,15 @@ class PagoService {
           [reservaId, validacion.monto, validacion.metodo, validacion.tipo_pago, validacion.referencia, validacion.notas, registradoPor]
         );
         pagoId = ins.insertId;
+      }
+
+      if (validacion.metodo === 'cupon') {
+        await cuponService.aplicarCupon(conn, {
+          codigo: validacion.referencia,
+          montoSolicitado: validacion.monto,
+          reservaId,
+          registradoPor
+        });
       }
 
       // Movimiento real de este cobro (el tramo que se acaba de cobrar, con

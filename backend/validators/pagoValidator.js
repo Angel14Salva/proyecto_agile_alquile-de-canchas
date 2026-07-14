@@ -25,10 +25,14 @@ function clasificarMonto(monto, precioTotal) {
 
 function validarRegistroPago(body, precioTotal, saldoPendiente = null) {
   const { metodo, referencia, monto, tipo_comprobante, notas } = body;
-  if (!metodo || !METODOS_CAJA.includes(metodo)) {
+  if (!metodo || (metodo !== 'cupon' && !METODOS_CAJA.includes(metodo))) {
     return { valido: false, error: 'Seleccione un metodo de pago valido' };
   }
-  if (METODOS_CON_REFERENCIA.includes(metodo) && (!referencia || !/^\d+$/.test(String(referencia).trim()))) {
+  if (metodo === 'cupon') {
+    if (!referencia || !String(referencia).trim()) {
+      return { valido: false, error: 'El cupón requiere el código como referencia' };
+    }
+  } else if (METODOS_CON_REFERENCIA.includes(metodo) && (!referencia || !/^\d+$/.test(String(referencia).trim()))) {
     return { valido: false, error: 'Yape/Plin/transferencia requieren numero de operacion numerico' };
   }
   if (tipo_comprobante && !TIPOS_COMPROBANTE.includes(tipo_comprobante)) {
@@ -68,15 +72,21 @@ function validarPagosHibridos(pagos, precioTotal) {
 
   for (const p of pagos) {
     const { metodo, monto, referencia } = p || {};
-    if (!metodo || !METODOS_CAJA.includes(metodo)) {
+    if (!metodo || (metodo !== 'cupon' && !METODOS_CAJA.includes(metodo))) {
       return { valido: false, error: 'Seleccione un metodo de pago valido en cada linea' };
     }
     const m = Math.round(parseFloat(monto) * 100) / 100;
     if (Number.isNaN(m) || m <= 0) {
       return { valido: false, error: 'Cada linea de pago debe tener un monto mayor a 0' };
     }
-    if (METODOS_CON_REFERENCIA.includes(metodo) && (!referencia || !/^\d+$/.test(String(referencia).trim()))) {
-      return { valido: false, error: `${metodo} requiere numero de operacion numerico` };
+    if (metodo === 'cupon') {
+      if (!referencia || !String(referencia).trim()) {
+        return { valido: false, error: 'El cupón requiere el código como referencia' };
+      }
+    } else if (METODOS_CON_REFERENCIA.includes(metodo)) {
+      if (!referencia || !/^\d+$/.test(String(referencia).trim())) {
+        return { valido: false, error: `${metodo} requiere numero de operacion numerico` };
+      }
     }
     lineas.push({ metodo, monto: m, referencia: referencia ? String(referencia).trim() : null });
     suma = Math.round((suma + m) * 100) / 100;

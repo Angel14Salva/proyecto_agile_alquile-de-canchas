@@ -4,7 +4,8 @@ const db = require('../db/connection');
 const { clasificarPago, tienePagoRegistrado } = require('./pagoHelper');
 const comprobanteService = require('./comprobanteService');
 const { validarCancelacionRecepcion } = require('../validators/cancelacionValidator');
-const { enviarCancelacionReserva } = require('./emailService');
+const { enviarCancelacionReserva, enviarCuponReembolso } = require('./emailService');
+const cuponService = require('./cuponService');
 
 const SELECT_RESERVA_BASE = `
   SELECT r.*,
@@ -108,7 +109,9 @@ class CancelacionService {
       reserva,
       infoPago,
       reembolsoConfirmado: opciones.reembolsoConfirmado,
-      reembolsoMetodo: opciones.reembolsoMetodo
+      reembolsoMetodo: opciones.reembolsoMetodo,
+      reembolsoExcepcional: opciones.reembolsoExcepcional,
+      motivoExcepcional: opciones.motivoExcepcional
     });
   }
 
@@ -143,15 +146,27 @@ class CancelacionService {
       );
 
       let notaCredito = null;
+      let cupon = null;
 
       if (tienePagoRegistrado(reserva.pago_estado, reserva.pago_monto)) {
+        let reembolsoMetodo = opciones.reembolsoMetodo || null;
+        if (opciones.reembolsoExcepcional) {
+          reembolsoMetodo = 'cupon';
+          cupon = await cuponService.generarCupon(conn, {
+            monto: infoPago.montoReembolsar,
+            motivo: opciones.motivoExcepcional,
+            reservaOrigenId: reservaId,
+            generadoPor: opciones.canceladoPorUserId
+          });
+        }
+
         await conn.query(
           `UPDATE pagos
            SET estado = 'reembolsado',
                reembolso_metodo = ?,
                reembolso_confirmado_at = ?
            WHERE id = ?`,
-          [opciones.reembolsoMetodo || null, ahora, reserva.pago_id]
+          [reembolsoMetodo, ahora, reserva.pago_id]
         );
 
         const comprobante = await comprobanteService.obtenerComprobanteOriginal(
@@ -187,12 +202,26 @@ class CancelacionService {
         console.error('Error enviando correo cancelacion:', mailErr.message);
       }
 
+      if (cupon) {
+        try {
+          await enviarCuponReembolso(reserva.cliente_email || rows[0].cliente_email, {
+            nombre: reserva.cliente_nombre || reserva.usuario_nombre,
+            reservaCodigo: reserva.codigo,
+            codigo: cupon.codigo,
+            monto: cupon.valor_inicial
+          });
+        } catch (mailErr) {
+          console.error('Error enviando correo de cupon:', mailErr.message);
+        }
+      }
+
       return {
         ok: true,
         message: 'Reserva cancelada correctamente',
         reserva: detalle,
         nota_credito: notaCredito,
-        monto_reembolsado: infoPago.requiereReembolso ? infoPago.montoReembolsar : 0
+        monto_reembolsado: infoPago.requiereReembolso ? infoPago.montoReembolsar : 0,
+        cupon: cupon
       };
     } catch (err) {
       await conn.rollback();
