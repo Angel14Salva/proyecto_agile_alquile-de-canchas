@@ -92,54 +92,6 @@
           <div id="checkinAcciones" style="margin-top:12px"></div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-title">✏️ Modificar reserva</div>
-        <div id="alertModificar" class="alert hidden" style="margin-bottom:12px"></div>
-        <div class="form-group">
-          <label>Código de reserva</label>
-          <div class="input-group">
-            <input type="text" id="modReservaId" placeholder="Ej: 19 o RES-2026-019" onkeydown="if(event.key==='Enter')buscarReservaModificar()">
-            <button class="btn-secondary" onclick="buscarReservaModificar()">Buscar</button>
-          </div>
-        </div>
-        <div id="modFormContainer" style="display:none">
-          <div style="background:var(--gray-bg,#f8f9fa);border:1px solid var(--gray-border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
-            <div id="modInfoActual"></div>
-          </div>
-          <div class="grid2">
-            <div class="form-group">
-              <label>Nueva fecha</label>
-              <input type="date" id="modFecha">
-            </div>
-            <div class="form-group">
-              <label>Nueva hora inicio</label>
-              <select id="modHora">
-                <option value="">— Selecciona hora —</option>
-                <option value="07:00">07:00</option>
-                <option value="08:00">08:00</option>
-                <option value="09:00">09:00</option>
-                <option value="10:00">10:00</option>
-                <option value="11:00">11:00</option>
-                <option value="12:00">12:00</option>
-                <option value="13:00">13:00</option>
-                <option value="14:00">14:00</option>
-                <option value="15:00">15:00</option>
-                <option value="16:00">16:00</option>
-                <option value="17:00">17:00</option>
-                <option value="18:00">18:00</option>
-                <option value="19:00">19:00</option>
-                <option value="20:00">20:00</option>
-                <option value="21:00">21:00</option>
-                <option value="22:00">22:00</option>
-              </select>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:8px">
-            <button class="btn-primary" onclick="guardarModificacion()">💾 Guardar cambios</button>
-            <button class="btn-secondary" onclick="cancelarModificacion()">Cancelar</button>
-          </div>
-        </div>
-      </div>
     </main>
   </div>
 </div>
@@ -153,7 +105,6 @@
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
   const hoy = new Date();
   document.getElementById('fechaHoy').textContent = hoy.toLocaleDateString('es-PE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  document.getElementById('modFecha').min = hoy.toISOString().split('T')[0];
   let reservaCheckIn = null;
 
   async function cargarEstadoCaja() {
@@ -307,98 +258,6 @@
       cargarEstadoCaja();
       buscarCheckIn();
     } catch(err) { alerta.textContent = err.message; alerta.className = 'alert alert-error'; }
-  }
-
-  let reservaEnEdicion = null;
-
-  async function cargarSlotsModificar() {
-    const fecha = document.getElementById('modFecha').value;
-    const canchaId = reservaEnEdicion?.cancha_id;
-    if (!fecha || !canchaId) return;
-    try {
-      const data = await api.get(`/api/canchas/${canchaId}/disponibilidad?fecha=${fecha}`);
-      const slots = data.slots || [];
-      const ocupadas = new Set(slots.filter(s=>!s.disponible).map(s=>parseInt(s.hora.split(':')[0])));
-      const horaIni = document.getElementById('modHora');
-      horaIni.innerHTML = '<option value="">— Selecciona hora —</option>';
-      for (let h = 7; h <= 22; h++) {
-        const ocp = ocupadas.has(h);
-        const str = String(h).padStart(2,'0') + ':00';
-        horaIni.innerHTML += `<option value="${str}" ${ocp?'disabled style="color:#ccc"':''}>${str}${ocp?' (ocupado)':''}</option>`;
-      }
-      document.getElementById('modSlotsInfo').textContent = ocupadas.size ? '⚠ Ocupado: ' + [...ocupadas].map(h=>String(h).padStart(2,'0')+':00').join(', ') : '✅ Todos disponibles';
-      document.getElementById('modHoraFin').innerHTML = '<option value="">— Selecciona hora fin —</option>';
-    } catch(e) { console.error(e); }
-  }
-  function actualizarModHoraFin() {
-    const ini = document.getElementById('modHora').value;
-    const fin = document.getElementById('modHoraFin');
-    if (!ini) { fin.innerHTML = '<option value="">— Selecciona hora fin —</option>'; return; }
-    const hIni = parseInt(ini.split(':')[0]);
-    const ocupadas = new Set(
-      Array.from(document.getElementById('modHora').options)
-        .filter(o => o.value && o.disabled)
-        .map(o => parseInt(o.value.split(':')[0]))
-    );
-    fin.innerHTML = '<option value="">— Selecciona hora fin —</option>';
-    for (let h = hIni + 1; h <= 23; h++) {
-      const str = String(h).padStart(2,'0') + ':00';
-      fin.innerHTML += `<option value="${str}">${str} (${h-hIni}h)</option>`;
-      if (ocupadas.has(h) || ocupadas.has(h+1)) break;
-    }
-  }
-  async function buscarReservaModificar() {
-    const val = document.getElementById('modReservaId').value.trim();
-    if (!val) return;
-    const alerta = document.getElementById('alertModificar');
-    const form   = document.getElementById('modFormContainer');
-    alerta.className='alert hidden'; form.style.display='none'; reservaEnEdicion=null;
-    try {
-      const reserva = val.startsWith('RES-') ? await api.get('/api/reservas/codigo/'+val) : await api.get('/api/reservas/'+val);
-      if (reserva.estado==='cancelada') { alerta.textContent='❌ Esta reserva ya fue cancelada.'; alerta.className='alert alert-error'; return; }
-      if (reserva.estado==='pagada')    { alerta.textContent='❌ Esta reserva ya fue pagada.';    alerta.className='alert alert-error'; return; }
-      const fechaHoraReserva = new Date(`${reserva.fecha?.substring(0,10)}T${reserva.hora_inicio}`);
-      const diffHoras = (fechaHoraReserva - new Date()) / (1000*60*60);
-      if (diffHoras < 2) { alerta.textContent='❌ No se puede modificar con menos de 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
-      reservaEnEdicion = reserva;
-      document.getElementById('modInfoActual').innerHTML = `
-        <strong>Reserva encontrada:</strong><br>
-        📋 <strong>${reserva.codigo||'—'}</strong> · ${reserva.cancha_nombre}<br>
-        👤 Cliente: ${reserva.cliente_nombre}<br>
-        📅 Fecha: <strong>${reserva.fecha?.substring(0,10)}</strong> · Hora: <strong>${reserva.hora_inicio?.substring(0,5)} – ${reserva.hora_fin?.substring(0,5)}</strong><br>
-        <span class="badge badge-amber" style="margin-top:4px">Estado: ${reserva.estado}</span>`;
-      document.getElementById('modFecha').value = reserva.fecha?.substring(0,10);
-      document.getElementById('modFecha').value  = reserva.fecha?.substring(0,10) || '';
-      await cargarSlotsModificar();
-      document.getElementById('modHora').value  = reserva.hora_inicio?.substring(0,5);
-      await actualizarModHoraFin();
-      document.getElementById('modHoraFin').value = reserva.hora_fin?.substring(0,5) || '';
-      form.style.display='block';
-    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
-  }
-
-  async function guardarModificacion() {
-    if (!reservaEnEdicion) return;
-    const nuevaFecha = document.getElementById('modFecha').value;
-    const nuevaHora  = document.getElementById('modHora').value;
-    const alerta     = document.getElementById('alertModificar');
-    if (!nuevaFecha||!nuevaHora) { alerta.textContent='⚠️ Selecciona fecha y hora.'; alerta.className='alert alert-error'; return; }
-    const diffHoras = (new Date(`${nuevaFecha}T${nuevaHora}:00`) - new Date()) / (1000*60*60);
-    if (diffHoras < 2) { alerta.textContent='❌ El nuevo horario debe tener al menos 2 horas de anticipación.'; alerta.className='alert alert-error'; return; }
-    try {
-      const nuevaHoraFin = document.getElementById('modHoraFin').value;
-      await api.put(`/api/reservas/${reservaEnEdicion.id}`, { fecha: nuevaFecha, hora_inicio: nuevaHora, hora_fin: nuevaHoraFin || undefined });
-      alerta.textContent='✅ Reserva modificada exitosamente.'; alerta.className='alert alert-success';
-      cancelarModificacion();
-    } catch(err) { alerta.textContent='❌ '+err.message; alerta.className='alert alert-error'; }
-  }
-
-  function cancelarModificacion() {
-    reservaEnEdicion=null;
-    document.getElementById('modReservaId').value='';
-    document.getElementById('modFormContainer').style.display='none';
-    document.getElementById('modInfoActual').innerHTML='';
-  }
-</script>
+  }</script>
 </body>
 </html>
