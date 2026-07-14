@@ -326,12 +326,19 @@ class FlowController {
       await db.query('UPDATE reservas_pendientes_pago SET commerce_order = ? WHERE id = ?', [commerceOrder, pendienteId]);
 
       const backendUrl = process.env.BACKEND_URL || 'https://proyecto-agile-alquile-de-canchas.onrender.com';
+      const isSandbox = (process.env.FLOW_API_URL || '').includes('sandbox') || 
+                        (process.env.FLOW_API_KEY || '').includes('sandbox') ||
+                        !process.env.FLOW_API_KEY ||
+                        process.env.FLOW_API_KEY.includes('dummy') ||
+                        process.env.FLOW_API_KEY.includes('your_');
+      const emailAEnviar = isSandbox ? 'cliente@canchas.com' : (process.env.FLOW_TEST_EMAIL || usuario[0].email);
+
       const params = {
         commerceOrder,
         subject        : 'Reserva cancha S/' + montoRestante + ' - Pacific Sport Center',
         currency       : 'PEN',
         amount         : Math.round(montoRestante),
-        email          : process.env.FLOW_TEST_EMAIL || usuario[0].email,
+        email          : emailAEnviar,
         paymentMethod  : 9,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION || (backendUrl + '/api/pagos/flow/confirmar'),
         urlReturn      : backendUrl + '/api/pagos/flow/retorno-web'
