@@ -40,49 +40,44 @@ class CancelacionLineaService {
     if (!validacion.valido) return { ok: false, error: validacion.error, status: 400 };
 
     const info = clasificarPago(data.pago.monto, data.reserva.precio_hora, data.pago.tipo_pago);
-    const esPasarela = ['flow', 'tarjeta'].includes(data.pago.metodo);
-
-    if (esPasarela) {
-      const resultado = await reembolsoPasarelaAdapter.solicitarReembolso({
-        tokenPago: data.pago.referencia,
-        monto: info.montoReembolsar,
-        reservaId,
-        codigo: data.reserva.codigo
-      });
-
-      if (!resultado.exito) {
-        await db.query('UPDATE reservas SET estado = "pendiente_reembolso" WHERE id = ?', [reservaId]);
-        try {
-          await enviarCancelacionLinea(data.reserva.cliente_email, {
-            nombre: data.reserva.cliente_nombre,
-            codigo: data.reserva.codigo,
-            monto: info.montoReembolsar.toFixed(2),
-            exito: false,
-            mensaje: 'Tu solicitud de cancelacion quedo en revision. El reembolso via pasarela no pudo completarse automaticamente.'
-          });
-        } catch (e) { /* noop */ }
-        return {
-          ok: true,
-          pendiente_reembolso: true,
-          message: 'Reserva en pendiente de reembolso para revision de recepcion',
-          monto_reembolsar: info.montoReembolsar
-        };
-      }
-    }
 
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
-      await conn.query('UPDATE reservas SET estado = "cancelada", cancelado_at = NOW() WHERE id = ?', [reservaId]);
-      await conn.query('UPDATE pagos SET estado = "reembolsado" WHERE id = ?', [data.pago.id]);
+      
+      const ahora = new Date();
+      await conn.query('UPDATE reservas SET estado = "cancelada", cancelado_at = NOW(), cancelado_por = ? WHERE id = ?', [userId, reservaId]);
 
-      const comprobante = await comprobanteService.obtenerComprobanteOriginal(conn, data.pago.id, reservaId);
-      const notaCredito = await comprobanteService.generarNotaCredito(conn, {
-        comprobanteId: comprobante.id,
-        reservaId,
-        monto: info.montoReembolsar,
-        canceladoPor: userId
-      });
+      let cupon = null;
+      let notaCredito = null;
+      let comprobante = null;
+
+      if (tienePagoRegistrado(data.pago?.estado, data.pago?.monto)) {
+        const cuponService = require('./cuponService');
+        cupon = await cuponService.generarCupon(conn, {
+          monto: info.montoReembolsar,
+          motivo: 'Cancelación en línea por el cliente con más de 2 horas de anticipación',
+          reservaOrigenId: reservaId,
+          generadoPor: userId
+        });
+
+        await conn.query(
+          `UPDATE pagos
+           SET estado = 'reembolsado',
+               reembolso_metodo = 'cupon',
+               reembolso_confirmado_at = ?
+           WHERE id = ?`,
+          [ahora, data.pago.id]
+        );
+
+        comprobante = await comprobanteService.obtenerComprobanteOriginal(conn, data.pago.id, reservaId);
+        notaCredito = await comprobanteService.generarNotaCredito(conn, {
+          comprobanteId: comprobante.id,
+          reservaId,
+          monto: info.montoReembolsar,
+          canceladoPor: userId
+        });
+      }
 
       await conn.commit();
 
@@ -92,15 +87,16 @@ class CancelacionLineaService {
           codigo: data.reserva.codigo,
           monto: info.montoReembolsar.toFixed(2),
           exito: true,
-          mensaje: 'Tu reserva fue cancelada y el reembolso fue procesado.'
+          mensaje: 'Tu reserva fue cancelada y se generó tu cupón de reembolso.'
         });
       } catch (e) { /* noop */ }
 
       return {
         ok: true,
-        message: 'Reserva cancelada y reembolso procesado',
+        message: 'Reserva cancelada y reembolso procesado con cupón',
         monto_reembolsado: info.montoReembolsar,
-        nota_credito: { ...notaCredito, comprobante_original: comprobante.numero }
+        cupon,
+        nota_credito: notaCredito ? { ...notaCredito, comprobante_original: comprobante.numero } : null
       };
     } catch (err) {
       await conn.rollback();
