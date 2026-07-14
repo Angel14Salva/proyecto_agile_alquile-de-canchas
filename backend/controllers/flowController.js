@@ -39,11 +39,20 @@ async function flowGet(endpoint, params) {
 
 // Misma validacion de solapamiento que usa reservaController.create
 async function horarioDisponible(cancha_id, fecha, hora_inicio, hora_fin) {
-  const [ocupado] = await db.query(
+  const [ocupadoReserva] = await db.query(
     'SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado != "cancelada" AND hora_inicio < ? AND hora_fin > ?',
     [cancha_id, fecha, hora_fin, hora_inicio]
   );
-  return ocupado.length === 0;
+  if (ocupadoReserva.length > 0) return false;
+
+  const [ocupadoPendiente] = await db.query(
+    `SELECT id FROM reservas_pendientes_pago 
+     WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' 
+       AND created_at >= NOW() - INTERVAL 10 MINUTE
+       AND hora_inicio < ? AND hora_fin > ?`,
+    [cancha_id, fecha, hora_fin, hora_inicio]
+  );
+  return ocupadoPendiente.length === 0;
 }
 
 async function generarCodigoReserva() {

@@ -68,7 +68,23 @@ class CanchaController {
         [id, fecha]
       );
 
+      const [pendientes] = await db.query(
+        `SELECT hora_inicio, hora_fin FROM reservas_pendientes_pago 
+         WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' AND created_at >= NOW() - INTERVAL 10 MINUTE`,
+        [id, fecha]
+      );
+
       const horasOcupadas = reservas.map(r => r.hora_inicio.substring(0, 5));
+      for (const p of pendientes) {
+        const hIni = parseInt(p.hora_inicio.substring(0, 2), 10);
+        const hFin = parseInt(p.hora_fin.substring(0, 2), 10);
+        for (let h = hIni; h < hFin; h++) {
+          const strHora = String(h).padStart(2, '0') + ':00';
+          if (!horasOcupadas.includes(strHora)) {
+            horasOcupadas.push(strHora);
+          }
+        }
+      }
       const apertura = parseInt(cancha[0].hora_apertura.substring(0, 2));
       const cierre = parseInt(cancha[0].hora_cierre.substring(0, 2));
       const slots = [];

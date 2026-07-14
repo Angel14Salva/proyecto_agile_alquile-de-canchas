@@ -50,11 +50,20 @@ class PagoService {
     }
     const cajaTurnoId = cajaAbierta[0].id;
 
-    const [ocupado] = await db.query(
+    const [ocupadoReserva] = await db.query(
       'SELECT id FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado != "cancelada" AND hora_inicio < ? AND hora_fin > ?',
       [cancha_id, fecha, hora_fin, hora_inicio]
     );
-    if (ocupado.length > 0) return { ok: false, error: 'Ese horario ya esta reservado o se superpone con otra reserva', status: 409 };
+    if (ocupadoReserva.length > 0) return { ok: false, error: 'Ese horario ya esta reservado o se superpone con otra reserva', status: 409 };
+
+    const [ocupadoPendiente] = await db.query(
+      `SELECT id FROM reservas_pendientes_pago 
+       WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' 
+         AND created_at >= NOW() - INTERVAL 10 MINUTE
+         AND hora_inicio < ? AND hora_fin > ?`,
+      [cancha_id, fecha, hora_fin, hora_inicio]
+    );
+    if (ocupadoPendiente.length > 0) return { ok: false, error: 'Ese horario está bloqueado temporalmente por un intento de pago en línea (expira en 10 minutos)', status: 409 };
 
     const [canchaRows] = await db.query('SELECT id, nombre, precio_hora FROM canchas WHERE id = ? AND activo = TRUE', [cancha_id]);
     if (canchaRows.length === 0) return { ok: false, error: 'Cancha no encontrada', status: 404 };
