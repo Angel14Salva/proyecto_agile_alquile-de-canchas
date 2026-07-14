@@ -94,3 +94,5 @@ app.listen(PORT, async () => {
   console.log(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
   await runMigrations();
 });
+
+// Despliegue manual forzado para Render
