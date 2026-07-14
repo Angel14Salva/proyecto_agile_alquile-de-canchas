@@ -46,8 +46,9 @@
         <div class="card-title">📋 Detalle de la reserva</div>
         <div id="detalleReserva" style="background:var(--gray-bg,#f8f9fa);border:1px solid var(--gray-border);border-radius:8px;padding:16px;font-size:13px;margin-bottom:16px"></div>
 
-        <div id="bloqueReembolso" style="display:none">
-          <div class="card-title" style="margin-top:8px">💸 Reembolso</div>
+        <!-- Bloque Reembolso Normal (> 2h) -->
+        <div id="bloqueReembolsoNormal" style="display:none">
+          <div class="card-title" style="margin-top:8px">💸 Reembolso Normal</div>
           <p style="font-size:13px;color:var(--gray-text);margin-bottom:12px">
             Esta reserva tiene pago registrado. Confirme que el reembolso fue entregado al cliente antes de cancelar.
           </p>
@@ -62,9 +63,32 @@
           <div class="form-group">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
               <input type="checkbox" id="reembolsoConfirmado">
-              Confirmo que el reembolso de <strong id="montoReembolsoLabel">S/ 0.00</strong> fue entregado al cliente
+              Confirmo que el reembolso de <strong class="montoReembolsoLabel">S/ 0.00</strong> fue entregado al cliente
             </label>
           </div>
+        </div>
+
+        <!-- Bloque Reembolso Excepcional (<= 2h) -->
+        <div id="bloqueReembolsoExcepcional" style="display:none">
+          <div class="card-title" style="margin-top:8px;color:#c0392b">⚠️ Reembolso Excepcional</div>
+          <p style="font-size:13px;color:var(--gray-text);margin-bottom:12px">
+            Faltan 2 horas o menos para el inicio de la reserva. El reembolso directo en efectivo/transferencia está bloqueado. Se generará un cupón de reembolso.
+          </p>
+          <div class="form-group">
+            <label style="font-weight:bold">Motivo obligatorio del reembolso excepcional (mínimo 15 caracteres)</label>
+            <textarea id="motivoExcepcional" rows="3" style="width:100%;box-sizing:border-box;margin-top:4px;padding:8px;border-radius:4px;border:1px solid var(--gray-border)" placeholder="Escriba el motivo detallado de la cancelación excepcional..."></textarea>
+          </div>
+        </div>
+
+        <!-- Bloque Cupón Generado -->
+        <div id="bloqueCuponGenerado" style="display:none;background:#e8f5e9;border:1px solid #c8e6c9;border-radius:8px;padding:16px;margin-bottom:16px">
+          <h3 style="color:#2e7d32;margin:0 0 8px">🎫 ¡Cupón de Reembolso Generado!</h3>
+          <p style="font-size:13px;margin:0 0 12px">Entregue este código al cliente para usarlo como saldo a favor en futuras reservas:</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div id="codigoCuponLabel" style="font-size:24px;font-weight:bold;letter-spacing:1px;color:#1b5e20;background:#c8e6c9;padding:6px 16px;border-radius:4px">CUP-XXXXXX</div>
+            <button class="btn-primary" onclick="copiarCupon()" style="margin:0">Copiar Código</button>
+          </div>
+          <p style="font-size:12px;color:#555;margin:8px 0 0">Monto: <strong id="montoCuponLabel">S/ 0.00</strong> · Válido para canjes parciales o totales.</p>
         </div>
 
         <div style="display:flex;gap:10px;margin-top:8px">
@@ -146,7 +170,9 @@
   function seleccionarReserva(r) {
     reservaSeleccionada = r;
     const cardDetalle = document.getElementById('cardDetalle');
-    const bloqueReembolso = document.getElementById('bloqueReembolso');
+    const bloqueReembolsoNormal = document.getElementById('bloqueReembolsoNormal');
+    const bloqueReembolsoExcepcional = document.getElementById('bloqueReembolsoExcepcional');
+    const bloqueCuponGenerado = document.getElementById('bloqueCuponGenerado');
     const btnCancelar = document.getElementById('btnCancelar');
 
     document.getElementById('detalleReserva').innerHTML = `
@@ -161,20 +187,37 @@
         ${r.cancelado_at ? `<div style="margin-top:6px;color:var(--red)"><strong>Cancelada por:</strong> ${r.cancelado_por_nombre || '—'} el ${new Date(r.cancelado_at).toLocaleString('es-PE')}</div>` : ''}
       </div>`;
 
+    // Reset cupon display
+    bloqueCuponGenerado.style.display = 'none';
+
     if (r.estado === 'cancelada') {
-      bloqueReembolso.style.display = 'none';
+      bloqueReembolsoNormal.style.display = 'none';
+      bloqueReembolsoExcepcional.style.display = 'none';
       btnCancelar.disabled = true;
       btnCancelar.textContent = 'Reserva ya cancelada';
     } else {
       btnCancelar.disabled = false;
       btnCancelar.textContent = 'Cancelar reserva';
       if (r.requiere_reembolso) {
-        bloqueReembolso.style.display = 'block';
-        document.getElementById('montoReembolsoLabel').textContent = `S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}`;
-        document.getElementById('reembolsoConfirmado').checked = false;
-        document.getElementById('reembolsoMetodo').value = '';
+        // Calcular anticipación (comparando en UTC o local simple para estimar)
+        const reservaFechaHora = new Date(String(r.fecha).substring(0, 10) + 'T' + String(r.hora_inicio).substring(0, 5));
+        const ahora = new Date();
+        const diffHoras = (reservaFechaHora.getTime() - ahora.getTime()) / 1000 / 60 / 60;
+
+        if (diffHoras > 2) {
+          bloqueReembolsoNormal.style.display = 'block';
+          bloqueReembolsoExcepcional.style.display = 'none';
+          document.querySelectorAll('.montoReembolsoLabel').forEach(el => el.textContent = `S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}`);
+          document.getElementById('reembolsoConfirmado').checked = false;
+          document.getElementById('reembolsoMetodo').value = '';
+        } else {
+          bloqueReembolsoNormal.style.display = 'none';
+          bloqueReembolsoExcepcional.style.display = 'block';
+          document.getElementById('motivoExcepcional').value = '';
+        }
       } else {
-        bloqueReembolso.style.display = 'none';
+        bloqueReembolsoNormal.style.display = 'none';
+        bloqueReembolsoExcepcional.style.display = 'none';
       }
     }
 
@@ -199,23 +242,44 @@
       return;
     }
 
-    const payload = { reembolso_confirmado: false };
+    const payload = {
+      reembolso_confirmado: false,
+      reembolso_excepcional: false
+    };
+
+    let esExcepcional = false;
 
     if (r.requiere_reembolso) {
-      payload.reembolso_confirmado = document.getElementById('reembolsoConfirmado').checked;
-      payload.reembolso_metodo = document.getElementById('reembolsoMetodo').value;
-      if (!payload.reembolso_confirmado) {
-        mostrarAlerta('Debe confirmar que el reembolso fue entregado al cliente', 'error');
-        return;
-      }
-      if (!payload.reembolso_metodo) {
-        mostrarAlerta('Seleccione el método de reembolso entregado', 'error');
-        return;
+      const reservaFechaHora = new Date(String(r.fecha).substring(0, 10) + 'T' + String(r.hora_inicio).substring(0, 5));
+      const ahora = new Date();
+      const diffHoras = (reservaFechaHora.getTime() - ahora.getTime()) / 1000 / 60 / 60;
+
+      if (diffHoras > 2) {
+        payload.reembolso_confirmado = document.getElementById('reembolsoConfirmado').checked;
+        payload.reembolso_metodo = document.getElementById('reembolsoMetodo').value;
+        if (!payload.reembolso_confirmado) {
+          mostrarAlerta('Debe confirmar que el reembolso fue entregado al cliente', 'error');
+          return;
+        }
+        if (!payload.reembolso_metodo) {
+          mostrarAlerta('Seleccione el método de reembolso entregado', 'error');
+          return;
+        }
+      } else {
+        esExcepcional = true;
+        payload.reembolso_excepcional = true;
+        payload.motivo_excepcional = document.getElementById('motivoExcepcional').value.trim();
+        if (!payload.motivo_excepcional || payload.motivo_excepcional.length < 15) {
+          mostrarAlerta('Debe ingresar un motivo de al menos 15 caracteres para el reembolso excepcional', 'error');
+          return;
+        }
       }
     }
 
     const msg = r.requiere_reembolso
-      ? `¿Cancelar la reserva ${r.codigo} y registrar reembolso de S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`
+      ? (esExcepcional 
+          ? `¿Cancelar la reserva ${r.codigo} generando un cupón de reembolso excepcional por S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`
+          : `¿Cancelar la reserva ${r.codigo} y registrar reembolso en mano de S/ ${parseFloat(r.monto_reembolsar).toFixed(2)}?`)
       : `¿Cancelar la reserva ${r.codigo}?`;
 
     if (!confirm(msg)) return;
@@ -228,9 +292,25 @@
       }
       mostrarAlerta(msgOk, 'success');
       seleccionarReserva(resp.reserva);
+
+      if (resp.cupon) {
+        document.getElementById('bloqueCuponGenerado').style.display = 'block';
+        document.getElementById('codigoCuponLabel').textContent = resp.cupon.codigo;
+        document.getElementById('montoCuponLabel').textContent = `S/ ${parseFloat(resp.cupon.valor_inicial).toFixed(2)}`;
+        document.getElementById('bloqueCuponGenerado').scrollIntoView({ behavior: 'smooth' });
+      }
     } catch (err) {
       mostrarAlerta(err.message, 'error');
     }
+  }
+
+  function copiarCupon() {
+    const text = document.getElementById('codigoCuponLabel').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Código del cupón copiado al portapapeles');
+    }).catch(err => {
+      console.error('Error al copiar:', err);
+    });
   }
 </script>
 </body>

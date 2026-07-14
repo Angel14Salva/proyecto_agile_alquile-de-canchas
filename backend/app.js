@@ -13,6 +13,7 @@ const pagoRoutes    = require('./routes/pagos');
 const cajaRoutes          = require('./routes/caja');
 const reporteRoutes       = require('./routes/reportes');
 const recepcionRoutes     = require('./routes/recepcion');
+const cuponRoutes         = require('./routes/cupones');
 const { authLimiter, generalLimiter } = require('./middleware/rateLimiter');
 const runMigrations = require('./db/migrations');
 const { iniciarJobCancelacion } = require('./jobs/cancelacionJob');
@@ -71,6 +72,7 @@ app.use('/api/pagos',    pagoRoutes);
 app.use('/api/caja',     cajaRoutes);
 app.use('/api/reportes', reporteRoutes);
 app.use('/api/recepcion', recepcionRoutes);
+app.use('/api/cupones',  cuponRoutes);
 
 app.get('*.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend', req.path), (err) => {

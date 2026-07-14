@@ -163,7 +163,14 @@ async function enviarBoletaVenta(email, datos) {
   await enviarEmail(email, (comprobante === 'factura' ? 'Factura' : 'Boleta') + ' de venta - ' + codigo, html);
 }
 
+async function enviarCuponReembolso(email, datos) {
+  const { nombre, reservaCodigo, codigo, monto } = datos;
+  await enviarEmail(email, 'Cupón de reembolso excepcional - ' + codigo,
+    '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><div style="background:#2d6a4f;padding:24px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0">Pacific Sport Center</h1><p style="color:#b7e4c7;margin:6px 0 0">Cupón de Reembolso Generado</p></div><div style="background:#f8f9fa;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e0e0e0"><p>Hola <strong>' + nombre + '</strong>,</p><p>Se ha generado un cupón de reembolso excepcional por la cancelación de la reserva <strong>' + reservaCodigo + '</strong>:</p><table style="width:100%;border-collapse:collapse;margin:16px 0"><tr><td style="padding:8px 0;color:#666">Código del Cupón</td><td style="font-size:20px;font-weight:700;color:#2d6a4f;letter-spacing:1px">' + codigo + '</td></tr><tr><td style="padding:8px 0;color:#666">Monto Disponible</td><td style="font-weight:700;color:#2d6a4f">S/ ' + parseFloat(monto).toFixed(2) + '</td></tr></table><p style="font-size:13px;color:#666;margin-top:16px">Puedes utilizar este código para pagar tus próximas reservas, ya sea en caja presencial o de forma online, hasta agotar su saldo.</p><p style="font-size:12px;color:#999">Pacific Sport Center - Trujillo, Perú</p></div></div>'
+  );
+}
+
 module.exports = {
   enviarConfirmacionReserva, enviarCancelacionReserva, enviarRecuperacionPassword,
-  enviarConfirmacionPago, enviarCancelacionLinea, enviarBoletaVenta
+  enviarConfirmacionPago, enviarCancelacionLinea, enviarBoletaVenta, enviarCuponReembolso
 };
