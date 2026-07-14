@@ -32,6 +32,13 @@ class PagoService {
   async crearReservaConPago({ cancha_id, fecha, hora_inicio, hora_fin, notas, cliente_nombre, cliente_dni, pagos, tipo_comprobante, email_boleta, usuarioId }) {
     if (!cancha_id || !fecha || !hora_inicio || !hora_fin)
       return { ok: false, error: 'Cancha, fecha, hora inicio y hora fin son requeridos', status: 400 };
+
+    const ahora       = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const fechaReserva = new Date(fecha + 'T' + hora_inicio);
+    const diffMin     = (fechaReserva - ahora) / 1000 / 60;
+    if (diffMin <= 0) {
+      return { ok: false, error: 'No se puede realizar una reserva en una fecha u hora pasada', status: 400 };
+    }
     if (!cliente_nombre || !cliente_nombre.trim())
       return { ok: false, error: 'El nombre del cliente es requerido', status: 400 };
     if (!cliente_dni || !/^\d{8}$/.test(cliente_dni))

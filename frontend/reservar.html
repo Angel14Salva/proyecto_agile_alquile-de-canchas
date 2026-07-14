@@ -352,30 +352,55 @@
   }
 
   function renderSlots(slots) {
+    const fechaSel = document.getElementById('fecha').value;
+    const ahora = new Date();
+    const esHoy = fechaSel === toISO(ahora);
+    
+    // Obtener la hora actual en la zona horaria del cliente
+    // (o local simple)
+    const horaActual = ahora.getHours();
+
     // Llenar selectores de hora inicio con slots disponibles
     const horas = [];
     for (let h = 7; h <= 22; h++) horas.push(String(h).padStart(2,'0') + ':00');
     const ocupadas = (slots||[]).filter(s=>!s.disponible).map(s=>s.hora);
     const ini = document.getElementById('horaInicio');
     const fin = document.getElementById('horaFin');
+    
     ini.innerHTML = '<option value="">-- Selecciona --</option>' + horas.map(h => {
-      const ocp = ocupadas.includes(h);
-      return `<option value="${h}" ${ocp?'disabled style="color:#ccc"':''}>${h}${ocp?' (ocupado)':''}</option>`;
+      const hVal = parseInt(h.split(':')[0]);
+      let ocp = ocupadas.includes(h);
+      let esPasado = esHoy && hVal <= horaActual;
+      
+      if (esPasado) {
+        ocp = true;
+      }
+      
+      return `<option value="${h}" ${ocp?'disabled style="color:#ccc"':''}>${h}${ocp && ocupadas.includes(h)?' (ocupado)':(esPasado?' (pasado)':'')}</option>`;
     }).join('');
+    
     fin.innerHTML = '<option value="">-- Selecciona --</option>';
     const div = document.getElementById('horariosOcupados');
     if (ocupadas.length) div.textContent = '⚠ Ocupado: ' + ocupadas.join(', ');
     else div.textContent = '✅ Todos los horarios disponibles';
+    
     if (!slots || slots.length === 0) {
       document.getElementById('slotsGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--gray-muted);padding:20px">No hay horarios disponibles</div>';
       return;
     }
-    document.getElementById('slotsGrid').innerHTML = slots.map(s => `
-      <div class="slot ${s.disponible ? 'libre' : 'ocupado'}"
-           onclick="${s.disponible ? `seleccionarSlot('${s.hora}')` : ''}">
-        ${s.hora}
-      </div>
-    `).join('');
+    
+    document.getElementById('slotsGrid').innerHTML = slots.map(s => {
+      const hVal = parseInt(s.hora.split(':')[0]);
+      const esPasado = esHoy && hVal <= horaActual;
+      const disp = s.disponible && !esPasado;
+      
+      return `
+        <div class="slot ${disp ? 'libre' : 'ocupado'}"
+             onclick="${disp ? `seleccionarSlot('${s.hora}')` : ''}">
+          ${s.hora}${esPasado ? ' (pasado)' : ''}
+        </div>
+      `;
+    }).join('');
   }
 
   function actualizarHoraFin() {

@@ -79,6 +79,8 @@ class ReservaController {
     const ahora       = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     const fechaReserva = new Date(fecha + 'T' + hora_inicio);
     const diffMin     = (fechaReserva - ahora) / 1000 / 60;
+    if (diffMin <= 0)
+      return res.status(400).json({ error: 'No se puede realizar una reserva en una fecha u hora pasada' });
     if (diffMin < 60 && rol === 'cliente')
       return res.status(400).json({ error: 'No se puede reservar con menos de 1 hora de anticipacion' });
 
