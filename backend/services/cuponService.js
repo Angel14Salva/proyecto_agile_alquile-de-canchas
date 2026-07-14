@@ -45,8 +45,8 @@ class CuponService {
     if (Number.isNaN(valor) || valor <= 0) {
       throw new Error('El monto del reembolso debe ser mayor a 0');
     }
-    if (!motivo || motivo.trim().length < 15) {
-      throw new Error('El motivo de reembolso excepcional debe tener al menos 15 caracteres');
+    if (!motivo || motivo.trim().length < 3) {
+      throw new Error('El motivo de reembolso debe tener al menos 3 caracteres');
     }
 
     const codigo = await this.generarCodigo(conn);
