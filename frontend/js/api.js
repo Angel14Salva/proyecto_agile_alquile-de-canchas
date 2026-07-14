@@ -1,7 +1,7 @@
 // Cambia esta URL según el entorno:
 // Desarrollo (Codespace): URL del puerto 3000 de tu Codespace
 // Producción (Render):    https://tu-backend.onrender.com
-const API_URL = 'https://proyecto-agile-alquile-de-canchas.onrender.com';
+const API_URL = 'http://localhost:4000';
 
 const api = {
   // ─── Token helpers ───────────────────────────────────────
