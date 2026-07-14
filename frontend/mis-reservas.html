@@ -173,7 +173,7 @@
     };
     document.getElementById('tablaReservas').innerHTML = `
       <table>
-        <thead><tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Pago</th><th>Monto</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Cancha</th><th>Fecha</th><th>Hora</th><th>Estado</th><th>Monto</th></tr></thead>
         <tbody>
           ${lista.map(r => `
             <tr>
@@ -182,13 +182,7 @@
               <td>${r.fecha?.substring(0,10)}</td>
               <td>${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</td>
               <td>${badgeEstado(r.estado)}</td>
-              <td>${badgePago(r.pago_estado)}</td>
               <td><strong>S/ ${parseFloat(r.precio_hora||0).toFixed(2)}</strong></td>
-              <td style="display:flex;gap:6px;flex-wrap:wrap">
-                ${r.estado === 'pendiente' && (!r.pago_estado || r.pago_estado === 'pendiente') ? `<button class="btn-primary btn-sm" onclick="abrirModalPago(${r.id}, ${r.precio_hora}, '${r.codigo}')">💳 Pagar</button>` : ''}
-                ${puedeModificar(r) ? `<button class="btn-secondary btn-sm" onclick="abrirModal(${r.id})">✏️ Editar</button>` : ''}
-                ${puedeCancelarLinea(r) ? `<button class="btn-danger btn-sm" onclick="cancelar(${r.id})">Cancelar</button>` : '—'}
-              </td>
             </tr>`).join('')}
         </tbody>
       </table>`;
