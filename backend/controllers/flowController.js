@@ -325,15 +325,16 @@ class FlowController {
       const commerceOrder = 'PSC-P' + pendienteId + '-' + Date.now();
       await db.query('UPDATE reservas_pendientes_pago SET commerce_order = ? WHERE id = ?', [commerceOrder, pendienteId]);
 
+      const backendUrl = process.env.BACKEND_URL || 'https://proyecto-agile-alquile-de-canchas.onrender.com';
       const params = {
         commerceOrder,
         subject        : 'Reserva cancha S/' + montoRestante + ' - Pacific Sport Center',
         currency       : 'PEN',
-        amount         : montoRestante,
+        amount         : Math.round(montoRestante),
         email          : usuario[0].email,
         paymentMethod  : 9,
-        urlConfirmation: process.env.FLOW_URL_CONFIRMACION || 'http://localhost/confirmar',
-        urlReturn      : (process.env.BACKEND_URL || 'https://proyecto-agile-alquile-de-canchas.onrender.com') + '/api/pagos/flow/retorno-web'
+        urlConfirmation: process.env.FLOW_URL_CONFIRMACION || (backendUrl + '/api/pagos/flow/confirmar'),
+        urlReturn      : backendUrl + '/api/pagos/flow/retorno-web'
       };
 
       let urlPago;
@@ -353,9 +354,11 @@ class FlowController {
           urlPago  = response.url + '?token=' + response.token;
           tokenValue = response.token;
         } catch (flowErr) {
-          console.warn('Fallo llamada a Flow API real, usando pasarela simulada:', flowErr.message);
-          tokenValue = 'MOCK-FLOW-TOKEN-' + pendienteId;
-          urlPago = params.urlReturn + '?token=' + tokenValue;
+          const flowMsg = flowErr?.response?.data?.message || flowErr?.response?.data || flowErr.message;
+          console.error('Fallo llamada a Flow API real:', flowMsg);
+          return res.status(400).json({ 
+            error: 'La pasarela de pago Flow reportó un error: ' + (typeof flowMsg === 'object' ? JSON.stringify(flowMsg) : flowMsg) 
+          });
         }
       }
 
@@ -363,7 +366,7 @@ class FlowController {
       res.json({ url: urlPago, token: tokenValue });
     } catch (err) {
       console.error('Error en Flow crear:', err?.response?.data || err?.message || err);
-      res.status(500).json({ error: 'Error al crear orden de pago' });
+      res.status(500).json({ error: 'Error al crear orden de pago: ' + (err.message || err) });
     }
   }
 
