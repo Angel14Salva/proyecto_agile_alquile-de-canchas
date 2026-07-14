@@ -331,7 +331,7 @@ class FlowController {
         subject        : 'Reserva cancha S/' + montoRestante + ' - Pacific Sport Center',
         currency       : 'PEN',
         amount         : Math.round(montoRestante),
-        email          : usuario[0].email,
+        email          : process.env.FLOW_TEST_EMAIL || usuario[0].email,
         paymentMethod  : 9,
         urlConfirmation: process.env.FLOW_URL_CONFIRMACION || (backendUrl + '/api/pagos/flow/confirmar'),
         urlReturn      : backendUrl + '/api/pagos/flow/retorno-web'
