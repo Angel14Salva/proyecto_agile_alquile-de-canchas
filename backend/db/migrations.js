@@ -85,37 +85,6 @@ async function runMigrations() {
        ADD COLUMN IF NOT EXISTS checkin_at DATETIME NULL,
        ADD COLUMN IF NOT EXISTS checkin_por INT NULL`,
 
-    // HU-12: reservas grandes
-    `CREATE TABLE IF NOT EXISTS reservas_grandes (
-       id            INT AUTO_INCREMENT PRIMARY KEY,
-       codigo        VARCHAR(20) UNIQUE,
-       usuario_id    INT NOT NULL,
-       nombre_org    VARCHAR(150) NOT NULL,
-       ruc           CHAR(11) NULL,
-       fecha         DATE NOT NULL,
-       turno         ENUM('manana','tarde','dia_completo') NOT NULL,
-       hora_inicio   TIME NOT NULL,
-       hora_fin      TIME NOT NULL,
-       num_canchas   INT NOT NULL,
-       precio_total  DECIMAL(10,2) NOT NULL,
-       monto_pagado  DECIMAL(10,2) NOT NULL DEFAULT 0,
-       estado        ENUM('pendiente','confirmada','cancelada') NOT NULL DEFAULT 'pendiente',
-       origen        ENUM('linea','recepcion') NOT NULL DEFAULT 'linea',
-       tipo_comprobante ENUM('boleta','factura') NULL,
-       notas         TEXT NULL,
-       created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT
-     )`,
-
-    `CREATE TABLE IF NOT EXISTS reservas_grandes_canchas (
-       id               INT AUTO_INCREMENT PRIMARY KEY,
-       reserva_grande_id INT NOT NULL,
-       cancha_id        INT NOT NULL,
-       FOREIGN KEY (reserva_grande_id) REFERENCES reservas_grandes(id) ON DELETE CASCADE,
-       FOREIGN KEY (cancha_id) REFERENCES canchas(id) ON DELETE RESTRICT,
-       UNIQUE KEY uq_rg_cancha (reserva_grande_id, cancha_id)
-     )`,
-
     // HU-14: caja mensual
     `CREATE TABLE IF NOT EXISTS caja_mensual (
        id             INT AUTO_INCREMENT PRIMARY KEY,
@@ -140,6 +109,72 @@ async function runMigrations() {
 
     // HU-11: estado pendiente_reembolso
     `ALTER TABLE reservas MODIFY COLUMN estado ENUM('pendiente','confirmada','cancelada','completada','pendiente_reembolso') NOT NULL DEFAULT 'pendiente'`,
+
+    // Fix pago pasarela: la reserva ya NO se crea hasta que Flow confirma el pago.
+    // Mientras el cliente paga, los datos quedan aquí (no bloquean el horario).
+    `CREATE TABLE IF NOT EXISTS reservas_pendientes_pago (
+       id             INT AUTO_INCREMENT PRIMARY KEY,
+       commerce_order VARCHAR(60)   NOT NULL UNIQUE,
+       usuario_id     INT           NOT NULL,
+       cancha_id      INT           NOT NULL,
+       fecha          DATE          NOT NULL,
+       hora_inicio    TIME          NOT NULL,
+       hora_fin       TIME          NOT NULL,
+       cliente_nombre VARCHAR(100)  NOT NULL,
+       cliente_dni    CHAR(8)       NOT NULL,
+       notas          TEXT          NULL,
+       monto          DECIMAL(8,2)  NOT NULL,
+       token          VARCHAR(100)  NULL,
+       estado         ENUM('pendiente','confirmado','fallido','conflicto','expirado') NOT NULL DEFAULT 'pendiente',
+       reserva_id     INT           NULL,
+       created_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       updated_at     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+       FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+       FOREIGN KEY (cancha_id)  REFERENCES canchas(id)  ON DELETE RESTRICT,
+       FOREIGN KEY (reserva_id) REFERENCES reservas(id) ON DELETE SET NULL
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_pendientes_estado ON reservas_pendientes_pago(estado)`,
+    `CREATE INDEX IF NOT EXISTS idx_pendientes_slot ON reservas_pendientes_pago(cancha_id, fecha, hora_inicio)`,
+
+    // Apertura/cierre de caja (recepción)
+    `CREATE TABLE IF NOT EXISTS caja_turnos (
+       id                INT AUTO_INCREMENT PRIMARY KEY,
+       estado            ENUM('abierta','cerrada') NOT NULL DEFAULT 'abierta',
+       monto_inicial     DECIMAL(10,2) NOT NULL DEFAULT 0,
+       abierta_por       INT NOT NULL,
+       abierta_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       cerrada_por       INT NULL,
+       cerrada_at        DATETIME NULL,
+       efectivo_esperado DECIMAL(10,2) NULL,
+       efectivo_contado  DECIMAL(10,2) NULL,
+       diferencia        DECIMAL(10,2) NULL,
+       notas_cierre      TEXT NULL,
+       FOREIGN KEY (abierta_por) REFERENCES usuarios(id) ON DELETE RESTRICT,
+       FOREIGN KEY (cerrada_por) REFERENCES usuarios(id) ON DELETE SET NULL
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_caja_estado ON caja_turnos(estado)`,
+
+    // Detalle real de cada cobro registrado por recepción (permite pago
+    // "híbrido": una reserva pagada en partes con métodos distintos, sin
+    // perder el desglose exacto que necesita el cuadre de caja).
+    `CREATE TABLE IF NOT EXISTS pagos_movimientos (
+       id             INT AUTO_INCREMENT PRIMARY KEY,
+       pago_id        INT NOT NULL,
+       caja_turno_id  INT NULL,
+       metodo         ENUM('efectivo','transferencia','yape','plin','tarjeta','flow') NOT NULL,
+       monto          DECIMAL(8,2) NOT NULL,
+       referencia     VARCHAR(100) NULL,
+       registrado_por INT NULL,
+       created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+       FOREIGN KEY (pago_id) REFERENCES pagos(id) ON DELETE RESTRICT,
+       FOREIGN KEY (caja_turno_id) REFERENCES caja_turnos(id) ON DELETE SET NULL,
+       FOREIGN KEY (registrado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_pagomov_caja ON pagos_movimientos(caja_turno_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_pagomov_metodo ON pagos_movimientos(metodo)`,
+
+    // 'mixto' cuando una reserva termina pagada con mas de un metodo distinto
+    `ALTER TABLE pagos MODIFY COLUMN metodo ENUM('efectivo','transferencia','yape','plin','tarjeta','flow','mixto') NOT NULL`,
   ];
 
   for (const sql of migrations) {
@@ -152,13 +187,6 @@ async function runMigrations() {
         console.warn('[migrations] Advertencia:', err.message);
       }
     }
-  }
-  // Agregar monto_pagado si no existe
-  try {
-    await db.query('ALTER TABLE reservas_grandes ADD COLUMN IF NOT EXISTS monto_pagado DECIMAL(10,2) NOT NULL DEFAULT 0');
-    console.log('[migrations] monto_pagado OK');
-  } catch(e) {
-    console.warn('[migrations] monto_pagado:', e.message);
   }
   console.log('[migrations] OK');
 }

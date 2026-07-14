@@ -54,23 +54,45 @@ function ingresosPorCancha(reservas) {
   }));
 }
 
-function controlCajaRecepcionistas(pagos) {
+// 'movimientos' viene de pagos_movimientos: cada fila ya tiene el metodo REAL
+// con el que se cobro ese tramo (nunca 'mixto'), asi que el efectivo vs
+// digital sale exacto aunque una reserva se haya pagado combinando metodos.
+// 'turnos' son los caja_turnos del rango, para sumar el fondo inicial y el
+// total esperado de efectivo por recepcionista.
+function controlCajaRecepcionistas(movimientos, turnos = []) {
   const map = {};
-  pagos.forEach(p => {
-    const nombre = p.recepcionista_nombre || 'En linea';
-    if (!map[nombre]) map[nombre] = { efectivo: 0, digital: 0, total: 0, count: 0 };
+  const getOrCreate = (nombre) => {
+    if (!map[nombre]) map[nombre] = { efectivo: 0, digital: 0, total: 0, count: 0, monto_inicial: 0, total_esperado: 0, total_contado: 0 };
+    return map[nombre];
+  };
+
+  movimientos.forEach(p => {
+    const d = getOrCreate(p.recepcionista_nombre || 'En linea');
     const m = parseFloat(p.monto || 0);
-    if (p.metodo === 'efectivo') map[nombre].efectivo += m;
-    else map[nombre].digital += m;
-    map[nombre].total += m;
-    map[nombre].count++;
+    if (p.metodo === 'efectivo') d.efectivo += m;
+    else d.digital += m;
+    d.total += m;
+    d.count++;
   });
+
+  turnos.forEach(t => {
+    const d = getOrCreate(t.recepcionista_nombre || 'Sin asignar');
+    d.monto_inicial += parseFloat(t.monto_inicial || 0);
+    d.total_esperado += parseFloat(t.efectivo_esperado || 0);
+    // El contado solo existe una vez que el turno se cerro (antes no se ha
+    // hecho el conteo fisico todavia).
+    if (t.estado === 'cerrada') d.total_contado += parseFloat(t.efectivo_contado || 0);
+  });
+
   return Object.entries(map).map(([nombre, d]) => ({
     nombre,
     efectivo: Math.round(d.efectivo * 100) / 100,
     digital: Math.round(d.digital * 100) / 100,
     total: Math.round(d.total * 100) / 100,
-    cobros: d.count
+    cobros: d.count,
+    monto_inicial: Math.round(d.monto_inicial * 100) / 100,
+    total_esperado: Math.round(d.total_esperado * 100) / 100,
+    total_contado: Math.round(d.total_contado * 100) / 100
   }));
 }
 

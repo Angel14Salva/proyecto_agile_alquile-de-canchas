@@ -1,6 +1,6 @@
 'use strict';
 
-const METODOS_CAJA = ['efectivo', 'yape', 'plin', 'transferencia'];
+const METODOS_CAJA = ['efectivo', 'yape', 'plin', 'transferencia', 'tarjeta'];
 const METODOS_CON_REFERENCIA = ['yape', 'plin', 'transferencia'];
 const TIPOS_COMPROBANTE = ['boleta', 'factura'];
 
@@ -51,7 +51,48 @@ function validarRegistroPago(body, precioTotal, saldoPendiente = null) {
   return { ...c, metodo, referencia: referencia || null, tipo_comprobante: tipo_comprobante || 'boleta', notas: notas || null };
 }
 
+// Pago (posiblemente hibrido) al crear una reserva desde recepcion: una o mas
+// lineas de metodo+monto que deben sumar EXACTAMENTE el precio total. Ya no
+// se acepta adelanto/pago parcial: la reserva nace pagada por completo.
+function validarPagosHibridos(pagos, precioTotal) {
+  if (!Array.isArray(pagos) || pagos.length === 0) {
+    return { valido: false, error: 'Debe registrar al menos una forma de pago' };
+  }
+  if (pagos.length > 4) {
+    return { valido: false, error: 'No se pueden combinar mas de 4 formas de pago' };
+  }
+
+  const total = Math.round(parseFloat(precioTotal) * 100) / 100;
+  const lineas = [];
+  let suma = 0;
+
+  for (const p of pagos) {
+    const { metodo, monto, referencia } = p || {};
+    if (!metodo || !METODOS_CAJA.includes(metodo)) {
+      return { valido: false, error: 'Seleccione un metodo de pago valido en cada linea' };
+    }
+    const m = Math.round(parseFloat(monto) * 100) / 100;
+    if (Number.isNaN(m) || m <= 0) {
+      return { valido: false, error: 'Cada linea de pago debe tener un monto mayor a 0' };
+    }
+    if (METODOS_CON_REFERENCIA.includes(metodo) && (!referencia || !/^\d+$/.test(String(referencia).trim()))) {
+      return { valido: false, error: `${metodo} requiere numero de operacion numerico` };
+    }
+    lineas.push({ metodo, monto: m, referencia: referencia ? String(referencia).trim() : null });
+    suma = Math.round((suma + m) * 100) / 100;
+  }
+
+  if (Math.abs(suma - total) > 0.01) {
+    return { valido: false, error: `Las formas de pago deben sumar exactamente el total: S/ ${total.toFixed(2)} (ingresado: S/ ${suma.toFixed(2)})` };
+  }
+
+  const metodosDistintos = new Set(lineas.map(l => l.metodo));
+  const metodoConsolidado = metodosDistintos.size > 1 ? 'mixto' : lineas[0].metodo;
+
+  return { valido: true, lineas, monto: total, metodoConsolidado };
+}
+
 module.exports = {
   METODOS_CAJA, METODOS_CON_REFERENCIA, TIPOS_COMPROBANTE,
-  calcularRangoPago, clasificarMonto, validarRegistroPago
+  calcularRangoPago, clasificarMonto, validarRegistroPago, validarPagosHibridos
 };

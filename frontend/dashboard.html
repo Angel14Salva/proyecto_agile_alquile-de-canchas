@@ -255,8 +255,13 @@
         return;
       }
       document.getElementById('controlCaja').innerHTML =
-        `<div class="table-wrap"><table><thead><tr><th>Recepcionista</th><th>Efectivo</th><th>Digital</th><th>Total</th></tr></thead><tbody>
-          ${caja.map(c => `<tr><td>${c.nombre}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td><strong>S/ ${c.total.toFixed(2)}</strong></td></tr>`).join('')}
+        `<div class="table-wrap"><table><thead><tr><th>Recepcionista</th><th>Monto inicial</th><th>Efectivo cobrado</th><th>Digital</th><th>Total cobrado</th><th>Esperado al cierre</th><th>Contado al cierre</th><th>Diferencia</th></tr></thead><tbody>
+          ${caja.map(c => {
+            const dif = Math.round((c.total_contado - c.total_esperado) * 100) / 100;
+            const difColor = dif === 0 ? 'inherit' : (dif > 0 ? '#16a34a' : '#dc2626');
+            const difTexto = dif === 0 ? 'S/ 0.00 ✅' : (dif > 0 ? `+S/ ${dif.toFixed(2)}` : `-S/ ${Math.abs(dif).toFixed(2)}`);
+            return `<tr><td>${c.nombre}</td><td>S/ ${c.monto_inicial.toFixed(2)}</td><td>S/ ${c.efectivo.toFixed(2)}</td><td>S/ ${c.digital.toFixed(2)}</td><td>S/ ${c.total.toFixed(2)}</td><td>S/ ${c.total_esperado.toFixed(2)}</td><td>S/ ${c.total_contado.toFixed(2)}</td><td style="color:${difColor};font-weight:600">${difTexto}</td></tr>`;
+          }).join('')}
         </tbody></table></div>`;
     } catch(e) { console.error(e); }
   }

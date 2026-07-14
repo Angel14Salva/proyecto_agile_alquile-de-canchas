@@ -6,7 +6,7 @@ const pool = mysql.createPool({
   user    : process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  ssl     : { rejectUnauthorized: true },  // Obligatorio en TiDB Cloud
+  ssl     : process.env.DB_SSL === 'false' ? undefined : { rejectUnauthorized: true },  // Obligatorio en TiDB Cloud; desactivable con DB_SSL=false para MySQL local
   waitForConnections: true,
   connectionLimit   : 10,
   queueLimit        : 0

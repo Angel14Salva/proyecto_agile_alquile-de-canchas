@@ -18,13 +18,25 @@ async function cancelarReservasPendientes() {
       [fechaLimite, fechaLimite, horaLimite]
     );
 
-    if (reservas.length === 0) return;
-
-    for (const r of reservas) {
-      await db.query("UPDATE reservas SET estado = 'cancelada' WHERE id = ?", [r.id]);
-      console.log('[AutoCancel] Reserva ' + r.codigo + ' cancelada por falta de pago');
+    if (reservas.length > 0) {
+      for (const r of reservas) {
+        await db.query("UPDATE reservas SET estado = 'cancelada' WHERE id = ?", [r.id]);
+        console.log('[AutoCancel] Reserva ' + r.codigo + ' cancelada por falta de pago');
+      }
+      console.log('[AutoCancel] ' + reservas.length + ' reservas canceladas');
     }
-    console.log('[AutoCancel] ' + reservas.length + ' reservas canceladas');
+
+    // Intentos de pago por pasarela que el cliente abandonó (nunca pagó y nunca volvió).
+    // No bloquean ningún horario (la reserva nunca se creó), solo se marcan para
+    // no dejarlos como "pendiente" indefinidamente.
+    const [expirados] = await db.query(
+      `UPDATE reservas_pendientes_pago
+       SET estado = 'expirado'
+       WHERE estado = 'pendiente' AND created_at < DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
+    );
+    if (expirados.affectedRows > 0) {
+      console.log('[AutoCancel] ' + expirados.affectedRows + ' intentos de pago Flow expirados');
+    }
   } catch (e) {
     console.error('[AutoCancel] Error:', e.message);
   }

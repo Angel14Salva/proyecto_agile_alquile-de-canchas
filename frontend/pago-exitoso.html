@@ -21,6 +21,18 @@
       <p style="color:#666;font-size:13px;margin-bottom:24px">Te enviamos un correo de confirmación con los detalles.</p>
       <a href="mis-reservas.html" class="btn-primary" style="display:inline-block;padding:12px 28px;background:#16a34a;color:white;border-radius:8px;text-decoration:none;font-weight:600">Ver mis reservas</a>
     </div>
+    <div id="noPagadoMsg" style="display:none">
+      <div style="font-size:64px;margin-bottom:16px">⚠️</div>
+      <h2 style="color:#b45309;margin-bottom:8px">Pago no completado</h2>
+      <p style="color:#666;margin-bottom:24px">No se registró el pago, así que la reserva no se creó. El horario sigue disponible, puedes intentarlo de nuevo.</p>
+      <a href="reservar.html" class="btn-primary" style="display:inline-block;padding:12px 28px;background:#16a34a;color:white;border-radius:8px;text-decoration:none;font-weight:600">Intentar de nuevo</a>
+    </div>
+    <div id="conflictoMsg" style="display:none">
+      <div style="font-size:64px;margin-bottom:16px">⚠️</div>
+      <h2 style="color:#b45309;margin-bottom:8px">Horario ya no disponible</h2>
+      <p style="color:#666;margin-bottom:24px">Tu pago se realizó, pero justo en ese momento otra persona tomó ese horario. Contáctanos con tu comprobante de pago para reprogramar tu reserva o gestionar el reembolso.</p>
+      <a href="mis-reservas.html" class="btn-primary" style="display:inline-block;padding:12px 28px;background:#16a34a;color:white;border-radius:8px;text-decoration:none;font-weight:600">Ir a mis reservas</a>
+    </div>
     <div id="errorMsg" style="display:none">
       <div style="font-size:64px;margin-bottom:16px">❌</div>
       <h2 style="color:#dc2626;margin-bottom:8px">Error al confirmar</h2>
@@ -31,13 +43,17 @@
 </div>
 <script>
   const params = new URLSearchParams(window.location.search);
-  const reservaId = params.get('reserva');
+  const codigo = params.get('codigo');
   const status = params.get('status');
 
   document.getElementById('loadingMsg').style.display = 'none';
-  if (status === 'success' && reservaId) {
+  if (status === 'success' && codigo) {
     document.getElementById('successMsg').style.display = 'block';
-    document.getElementById('codigoReserva').textContent = 'Reserva #' + reservaId + ' confirmada';
+    document.getElementById('codigoReserva').textContent = 'Reserva ' + codigo + ' confirmada';
+  } else if (status === 'no_pagado') {
+    document.getElementById('noPagadoMsg').style.display = 'block';
+  } else if (status === 'conflicto') {
+    document.getElementById('conflictoMsg').style.display = 'block';
   } else {
     document.getElementById('errorMsg').style.display = 'block';
   }

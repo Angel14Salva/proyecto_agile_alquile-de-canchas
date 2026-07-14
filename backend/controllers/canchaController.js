@@ -67,13 +67,6 @@ class CanchaController {
         'SELECT hora_inicio FROM reservas WHERE cancha_id = ? AND fecha = ? AND estado NOT IN ("cancelada","pendiente_reembolso")',
         [id, fecha]
       );
-      const [rgOcupadas] = await db.query(
-        `SELECT 1 FROM reservas_grandes_canchas rgc
-         JOIN reservas_grandes rg ON rg.id = rgc.reserva_grande_id
-         WHERE rgc.cancha_id = ? AND rg.fecha = ? AND rg.estado != 'cancelada' LIMIT 1`,
-        [id, fecha]
-      );
-      const bloqueadaGrande = rgOcupadas.length > 0;
 
       const horasOcupadas = reservas.map(r => r.hora_inicio.substring(0, 5));
       const apertura = parseInt(cancha[0].hora_apertura.substring(0, 2));
@@ -83,7 +76,7 @@ class CanchaController {
         const hora = String(h).padStart(2, '0') + ':00';
         slots.push({
           hora,
-          disponible: !bloqueadaGrande && !horasOcupadas.includes(hora),
+          disponible: !horasOcupadas.includes(hora),
           precio: cancha[0].precio_hora
         });
       }
