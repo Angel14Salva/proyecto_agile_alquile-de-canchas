@@ -66,26 +66,9 @@
           <details>
             <summary style="cursor:pointer;font-size:13px;color:var(--gray-text)">Cerrar caja</summary>
             <div style="margin-top:12px;padding:12px;background:var(--gray-bg,#f8f9fa);border-radius:8px">
-              <p style="font-size:12px;color:var(--gray-text);margin-bottom:10px">Cuenta/verifica lo recibido por cada medio y coloca el total. El efectivo es obligatorio; los demás solo si tuvieron movimiento.</p>
               <div class="form-group">
-                <label>💵 Efectivo contado físicamente (S/) <span style="color:var(--red)">*</span></label>
-                <input type="text" id="cierreEfectivo" placeholder="Cuenta el dinero en caja y coloca el total" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
-              </div>
-              <div class="form-group" id="grupoCierreYape" style="display:none">
-                <label>💚 Yape verificado (S/)</label>
-                <input type="text" id="cierreYape" placeholder="0.00" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
-              </div>
-              <div class="form-group" id="grupoCierrePlin" style="display:none">
-                <label>💙 Plin verificado (S/)</label>
-                <input type="text" id="cierrePlin" placeholder="0.00" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
-              </div>
-              <div class="form-group" id="grupoCierreTransferencia" style="display:none">
-                <label>🏦 Transferencia verificada (S/)</label>
-                <input type="text" id="cierreTransferencia" placeholder="0.00" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
-              </div>
-              <div class="form-group" id="grupoCierreTarjeta" style="display:none">
-                <label>💳 Tarjeta verificada (S/)</label>
-                <input type="text" id="cierreTarjeta" placeholder="0.00" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
+                <label>Efectivo contado físicamente (S/)</label>
+                <input type="text" id="cajaEfectivoContado" placeholder="Cuenta el dinero en caja y coloca el total" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
               </div>
               <div class="form-group">
                 <label>Notas (opcional)</label>
@@ -195,12 +178,6 @@
       document.getElementById('cajaTotalTransferencia').textContent = 'S/ ' + c.totales.transferencia.toFixed(2);
       const fecha = new Date(c.abierta_at).toLocaleString('es-PE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
       document.getElementById('cajaInfoApertura').textContent = c.abierta_por + ' · ' + fecha;
-
-      // Solo pedir el contado de un metodo si tuvo movimiento en este turno
-      document.getElementById('grupoCierreYape').style.display = c.totales.yape > 0 ? 'block' : 'none';
-      document.getElementById('grupoCierrePlin').style.display = c.totales.plin > 0 ? 'block' : 'none';
-      document.getElementById('grupoCierreTransferencia').style.display = c.totales.transferencia > 0 ? 'block' : 'none';
-      document.getElementById('grupoCierreTarjeta').style.display = c.totales.tarjeta > 0 ? 'block' : 'none';
     } catch (err) {
       document.getElementById('cajaCargando').style.display = 'none';
       document.getElementById('cajaCerradaBox').style.display = 'block';
@@ -224,33 +201,18 @@
   }
 
   async function cerrarCaja() {
-    const efectivo = document.getElementById('cierreEfectivo').value;
+    const contado = document.getElementById('cajaEfectivoContado').value;
     const notas = document.getElementById('cajaNotasCierre').value;
     const alerta = document.getElementById('alertCierreCaja');
-    if (efectivo === '' || isNaN(parseFloat(efectivo))) {
+    if (contado === '' || isNaN(parseFloat(contado))) {
       alerta.textContent = 'Ingresa el efectivo contado'; alerta.className = 'alert alert-error'; return;
     }
-    const contados = { efectivo: parseFloat(efectivo) };
-    const opcionales = { yape: 'cierreYape', plin: 'cierrePlin', transferencia: 'cierreTransferencia', tarjeta: 'cierreTarjeta' };
-    for (const [metodo, id] of Object.entries(opcionales)) {
-      const val = document.getElementById(id).value;
-      if (val !== '') contados[metodo] = parseFloat(val);
-    }
     try {
-      const resp = await api.post('/api/caja/cerrar', { contados, notas: notas || null });
-      const d = resp.resumen.detalle;
-      const lineas = Object.entries(d)
-        .filter(([, v]) => v.contado !== null)
-        .map(([metodo, v]) => {
-          const dif = v.diferencia === 0 ? '✅' : (v.diferencia > 0 ? `sobrante S/ ${v.diferencia.toFixed(2)}` : `faltante S/ ${Math.abs(v.diferencia).toFixed(2)}`);
-          return `${metodo}: esperado S/ ${v.esperado.toFixed(2)} · contado S/ ${v.contado.toFixed(2)} · ${dif}`;
-        });
-      alert('Caja cerrada.\n' + lineas.join('\n'));
-      document.getElementById('cierreEfectivo').value = '';
-      document.getElementById('cierreYape').value = '';
-      document.getElementById('cierrePlin').value = '';
-      document.getElementById('cierreTransferencia').value = '';
-      document.getElementById('cierreTarjeta').value = '';
+      const resp = await api.post('/api/caja/cerrar', { efectivo_contado: parseFloat(contado), notas: notas || null });
+      const r = resp.resumen;
+      const difTxt = r.diferencia === 0 ? 'Cuadre exacto ✅' : (r.diferencia > 0 ? `Sobrante: S/ ${r.diferencia.toFixed(2)}` : `Faltante: S/ ${Math.abs(r.diferencia).toFixed(2)}`);
+      alert(`Caja cerrada.\nEfectivo esperado: S/ ${r.efectivo_esperado.toFixed(2)}\nEfectivo contado: S/ ${r.efectivo_contado.toFixed(2)}\n${difTxt}`);
+      document.getElementById('cajaEfectivoContado').value = '';
       document.getElementById('cajaNotasCierre').value = '';
       alerta.className = 'alert hidden';
       cargarEstadoCaja();
