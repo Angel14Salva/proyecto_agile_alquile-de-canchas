@@ -494,19 +494,25 @@ class FlowController {
 
   async cancelarPendiente(req, res) {
     const userId = req.user.userId;
-    const { id } = req.body;
-    if (!id) return res.status(400).json({ error: 'ID de reserva pendiente requerido' });
+    const { id, token } = req.body;
+    if (!id && !token) return res.status(400).json({ error: 'ID o Token de reserva pendiente requerido' });
     try {
-      const [pRows] = await db.query(
-        'SELECT * FROM reservas_pendientes_pago WHERE id = ? AND usuario_id = ?',
-        [id, userId]
-      );
+      let query = 'SELECT * FROM reservas_pendientes_pago WHERE ';
+      const params = [];
+      if (id) {
+        query += 'id = ? AND usuario_id = ?';
+        params.push(id, userId);
+      } else {
+        query += 'token = ? AND usuario_id = ?';
+        params.push(token, userId);
+      }
+      const [pRows] = await db.query(query, params);
       if (pRows.length === 0) {
         return res.status(404).json({ error: 'Reserva pendiente no encontrada' });
       }
       await db.query(
         'UPDATE reservas_pendientes_pago SET estado = "fallido" WHERE id = ?',
-        [id]
+        [pRows[0].id]
       );
       res.json({ ok: true, mensaje: 'Reserva pendiente cancelada y horario liberado' });
     } catch (err) {

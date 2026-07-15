@@ -24,8 +24,11 @@
     <div id="noPagadoMsg" style="display:none">
       <div style="font-size:64px;margin-bottom:16px">⚠️</div>
       <h2 style="color:#b45309;margin-bottom:8px">Pago no completado</h2>
-      <p style="color:#666;margin-bottom:24px">No se registró el pago, así que la reserva no se creó. El horario sigue disponible, puedes intentarlo de nuevo.</p>
-      <a href="reservar.html" class="btn-primary" style="display:inline-block;padding:12px 28px;background:#16a34a;color:white;border-radius:8px;text-decoration:none;font-weight:600">Intentar de nuevo</a>
+      <p style="color:#666;margin-bottom:24px">No completaste la transacción de pago. Puedes cancelar el intento de reserva para liberar el horario de inmediato y volver a elegir.</p>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+        <button id="btnCancelPayment" onclick="cancelarPago()" class="btn-primary" style="padding:12px 28px;background:#dc2626;border:none;color:white;border-radius:8px;font-weight:600;cursor:pointer">❌ Cancelar pago y liberar horario</button>
+        <a href="reservar.html" class="btn-secondary" style="display:inline-block;padding:12px 28px;background:#6b7280;color:white;border-radius:8px;text-decoration:none;font-weight:600">Volver a intentar</a>
+      </div>
     </div>
     <div id="conflictoMsg" style="display:none">
       <div style="font-size:64px;margin-bottom:16px">⚠️</div>
@@ -53,23 +56,27 @@
     document.getElementById('codigoReserva').textContent = 'Reserva ' + codigo + ' confirmada';
   } else if (status === 'no_pagado') {
     document.getElementById('noPagadoMsg').style.display = 'block';
-    const token = params.get('token');
-    if (token) {
-      // Intentar liberar de forma segura si la sesion de pago todavia estuviese en pendiente
-      api.get('/api/pagos/flow/pendiente-activa')
-        .then(resp => {
-          if (resp.activa && resp.token === token) {
-            api.post('/api/pagos/flow/cancelar-pendiente', { id: resp.id })
-              .then(() => console.log('Cancha liberada de forma exitosa'))
-              .catch(err => console.error(err));
-          }
-        })
-        .catch(err => console.error(err));
-    }
   } else if (status === 'conflicto') {
     document.getElementById('conflictoMsg').style.display = 'block';
   } else {
     document.getElementById('errorMsg').style.display = 'block';
+  }
+
+  async function cancelarPago() {
+    const token = params.get('token');
+    const btn = document.getElementById('btnCancelPayment');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Cancelando...';
+    }
+    try {
+      if (token) {
+        await api.post('/api/pagos/flow/cancelar-pendiente', { token });
+      }
+    } catch (err) {
+      console.error('Error al liberar reserva:', err);
+    }
+    window.location.href = 'reservar.html';
   }
 </script>
 </body>
