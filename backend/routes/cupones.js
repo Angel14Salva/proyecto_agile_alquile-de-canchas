@@ -2,7 +2,9 @@ const express = require('express');
 const router  = express.Router();
 const cuponController = require('../controllers/cuponController');
 const verifyToken = require('../middleware/verifyToken');
+const checkRole = require('../middleware/checkRole');
 
+router.get('/admin/recepcion', verifyToken, checkRole('admin'), cuponController.listarCuponesRecepcion.bind(cuponController));
 router.get('/', verifyToken, cuponController.listarMisCupones.bind(cuponController));
 router.get('/:codigo', verifyToken, cuponController.consultar.bind(cuponController));
 

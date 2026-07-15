@@ -13,11 +13,15 @@ class CajaController {
   }
 
   async abrir(req, res) {
-    const { monto_inicial } = req.body;
+    const { monto_inicial, nombre_recepcionista } = req.body;
     if (monto_inicial === undefined || monto_inicial === null)
       return res.status(400).json({ error: 'monto_inicial es requerido' });
     try {
-      const resultado = await cajaService.abrir({ montoInicial: monto_inicial, usuarioId: req.user.userId });
+      const resultado = await cajaService.abrir({ 
+        montoInicial: monto_inicial, 
+        usuarioId: req.user.userId,
+        nombreRecepcionista: nombre_recepcionista || null
+      });
       if (!resultado.ok) return res.status(resultado.status).json({ error: resultado.error });
       res.status(201).json(resultado);
     } catch (err) {

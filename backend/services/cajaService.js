@@ -26,7 +26,7 @@ class CajaService {
     return { totales, cantidadMovimientos: cantidadTotal };
   }
 
-  async abrir({ montoInicial, usuarioId }) {
+  async abrir({ montoInicial, usuarioId, nombreRecepcionista }) {
     const abierta = await this.obtenerAbierta();
     if (abierta) return { ok: false, error: 'Ya hay una caja abierta desde ' + abierta.abierta_at, status: 409 };
 
@@ -34,8 +34,8 @@ class CajaService {
     if (Number.isNaN(monto) || monto < 0) return { ok: false, error: 'Monto inicial inválido', status: 400 };
 
     const [ins] = await db.query(
-      'INSERT INTO caja_turnos (estado, monto_inicial, abierta_por) VALUES ("abierta", ?, ?)',
-      [monto, usuarioId]
+      'INSERT INTO caja_turnos (estado, monto_inicial, abierta_por, nombre_recepcionista) VALUES ("abierta", ?, ?, ?)',
+      [monto, usuarioId, nombreRecepcionista || null]
     );
     return { ok: true, caja_turno_id: ins.insertId };
   }
@@ -83,7 +83,7 @@ class CajaService {
       caja: {
         id: abierta.id,
         monto_inicial: parseFloat(abierta.monto_inicial),
-        abierta_por: abierta.abierta_por_nombre,
+        abierta_por: abierta.nombre_recepcionista || abierta.abierta_por_nombre,
         abierta_at: abierta.abierta_at,
         efectivo_en_caja: efectivoEnCaja,
         totales,
@@ -102,6 +102,18 @@ class CajaService {
        ORDER BY ct.cerrada_at DESC LIMIT ?`,
       [limite]
     );
+
+    for (const r of rows) {
+      const [movs] = await db.query(
+        `SELECT pm.metodo, pm.monto, pm.referencia, res.codigo AS reserva_codigo
+         FROM pagos_movimientos pm
+         JOIN pagos p ON pm.pago_id = p.id
+         JOIN reservas res ON p.reserva_id = res.id
+         WHERE pm.caja_turno_id = ?`,
+        [r.id]
+      );
+      r.movimientos = movs;
+    }
     return rows;
   }
 }

@@ -18,6 +18,7 @@ function renderSidebar(activePage) {
     // Gerente
     { page: 'dashboard',        href: 'dashboard.html',         icon: '📊', label: 'Panel de informes',    roles: ['admin'] },
     { page: 'control-caja-admin', href: 'control-caja-admin.html', icon: '💵', label: 'Control de caja',    roles: ['admin'] },
+    { page: 'control-cupones-admin', href: 'control-cupones-admin.html', icon: '🎟️', label: 'Control de cupones', roles: ['admin'] },
     { page: 'admin-export',     href: 'admin.html#informes',    icon: '📤', label: 'Exportar informes',    roles: ['admin'] },
     { page: 'admin-usuarios',   href: 'admin.html#usuarios',    icon: '👥', label: 'Gestión de usuarios',  roles: ['admin'] },
   ];

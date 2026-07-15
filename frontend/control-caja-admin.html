@@ -24,17 +24,33 @@
       <div class="page-header">
         <div>
           <div class="page-title">Control de caja</div>
-          <div class="page-sub">Historial de aperturas y cierres de caja de recepción.</div>
+          <div class="page-sub">Auditoría de arqueos de caja y cobros por pasarela en línea.</div>
         </div>
       </div>
       <div id="alert" class="alert hidden" style="margin-bottom:16px"></div>
-      
-      <div class="card">
+
+      <!-- Tabs de navegación -->
+      <div style="display:flex;gap:12px;margin-bottom:20px;border-bottom:2px solid var(--gray-border,#e0e0e0);padding-bottom:8px">
+        <button id="tabCajaBtn" class="btn-primary" onclick="switchTab('caja')" style="margin:0;padding:8px 16px;font-size:13px">🧾 Arqueos de Recepción</button>
+        <button id="tabLineaBtn" class="btn-secondary" onclick="switchTab('linea')" style="margin:0;padding:8px 16px;font-size:13px">🌐 Reservas en Línea (Flow)</button>
+      </div>
+
+      <!-- Sección 1: Arqueos de Recepción -->
+      <div id="seccionCaja" class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
           <div class="card-title" style="margin:0">Cierres de caja (Últimos 30 turnos)</div>
-          <button class="btn-secondary" onclick="cargar()" style="margin:0;padding:6px 12px;font-size:12px">🔄 Actualizar</button>
+          <button class="btn-secondary" onclick="cargarCaja()" style="margin:0;padding:6px 12px;font-size:12px">🔄 Actualizar</button>
         </div>
         <div id="tablaCaja"><div class="loading"><span class="spinner"></span>Cargando historial de caja...</div></div>
+      </div>
+
+      <!-- Sección 2: Reservas en Línea -->
+      <div id="seccionLinea" class="card" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div class="card-title" style="margin:0">Cobros recibidos por Pasarela (Flow)</div>
+          <button class="btn-secondary" onclick="cargarLinea()" style="margin:0;padding:6px 12px;font-size:12px">🔄 Actualizar</button>
+        </div>
+        <div id="tablaLinea"><div class="loading"><span class="spinner"></span>Cargando reservas en línea...</div></div>
       </div>
     </main>
   </div>
@@ -49,38 +65,63 @@
   renderSidebar('control-caja-admin');
   document.getElementById('topbarUser').textContent = `👤 ${api.getUsuario().nombre}`;
 
-  async function cargar() {
+  let currentTab = 'caja';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    const tabCajaBtn = document.getElementById('tabCajaBtn');
+    const tabLineaBtn = document.getElementById('tabLineaBtn');
+    const seccionCaja = document.getElementById('seccionCaja');
+    const seccionLinea = document.getElementById('seccionLinea');
+
+    if (tab === 'caja') {
+      tabCajaBtn.className = 'btn-primary';
+      tabLineaBtn.className = 'btn-secondary';
+      seccionCaja.style.display = 'block';
+      seccionLinea.style.display = 'none';
+      cargarCaja();
+    } else {
+      tabCajaBtn.className = 'btn-secondary';
+      tabLineaBtn.className = 'btn-primary';
+      seccionCaja.style.display = 'none';
+      seccionLinea.style.display = 'block';
+      cargarLinea();
+    }
+  }
+
+  const formatoFecha = (f) => {
+    if (!f) return '—';
+    const d = new Date(f);
+    return d.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) + ' ' + d.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' });
+  };
+
+  async function cargarCaja() {
     try {
       const historial = await api.get('/api/caja/historial');
-      renderTabla(historial);
+      renderTablaCaja(historial);
     } catch(err) {
       document.getElementById('tablaCaja').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
     }
   }
 
-  function renderTabla(lista) {
+  function renderTablaCaja(lista) {
     if (lista.length === 0) {
-      document.getElementById('tablaCaja').innerHTML = '<div class="empty"><div class="empty-icon">💵</div>No hay cierres de caja registrados en el sistema</div>';
+      document.getElementById('tablaCaja').innerHTML = '<div class="empty"><div class="empty-icon">💵</div>No hay cierres de caja registrados</div>';
       return;
     }
-
-    const formatoFecha = (f) => {
-      if (!f) return '—';
-      const d = new Date(f);
-      return d.toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' }) + ' ' + d.toLocaleTimeString('es-PE', { hour:'2-digit', minute:'2-digit' });
-    };
 
     document.getElementById('tablaCaja').innerHTML = `
       <table>
         <thead>
           <tr>
             <th>Turno</th>
-            <th>Apertura (Usuario / Fecha / Inicial)</th>
+            <th>Apertura (Recepcionista / Fecha / Inicial)</th>
             <th>Cierre (Usuario / Fecha)</th>
             <th>Efectivo Esperado</th>
             <th>Efectivo Contado</th>
             <th>Diferencia / Cuadre</th>
-            <th>Observaciones / Notas</th>
+            <th>Movimientos Digitales (Op. Refs)</th>
+            <th>Observaciones</th>
           </tr>
         </thead>
         <tbody>
@@ -95,13 +136,35 @@
               difBadge = `<span class="badge badge-amber">+S/ ${dif.toFixed(2)} ⚠️ Sobrante</span>`;
             }
 
+            // Filtrar movimientos digitales y formatear según reglas
+            const digitalMovs = (c.movimientos || []).filter(m => m.metodo !== 'efectivo');
+            let digitalHtml = '';
+            if (digitalMovs.length === 0) {
+              digitalHtml = '<span style="color:#888;font-size:11px">Sin movs. digitales</span>';
+            } else {
+              digitalHtml = '<ul style="margin:0;padding-left:14px;font-size:11px;color:#333;text-align:left;list-style-type:square">';
+              digitalHtml += digitalMovs.map(m => {
+                const montoStr = `S/ ${parseFloat(m.monto).toFixed(2)}`;
+                const resTxt = m.reserva_codigo ? ` [${m.reserva_codigo}]` : '';
+                if (m.metodo === 'tarjeta') {
+                  // Tarjetas de crédito/débito: sólo indicar monto y medio, ocultar referencia
+                  return `<li style="margin-bottom:2px">💳 <strong>${montoStr}</strong> - Tarjeta${resTxt}</li>`;
+                } else {
+                  // Yape, Plin, Transferencia: mostrar código de operación / referencia
+                  const refStr = m.referencia ? ` (Op: ${m.referencia})` : ' (Sin Ref)';
+                  return `<li style="margin-bottom:2px">📱 <strong>${montoStr}</strong> - ${m.metodo.toUpperCase()}${refStr}${resTxt}</li>`;
+                }
+              }).join('');
+              digitalHtml += '</ul>';
+            }
+
             return `
               <tr>
                 <td><strong>#${c.id}</strong></td>
                 <td>
-                  <div style="font-weight:600">${c.abierta_por_nombre}</div>
+                  <div style="font-weight:700;color:#1e3a8a">${c.nombre_recepcionista || c.abierta_por_nombre}</div>
                   <div style="font-size:11px;color:#666">${formatoFecha(c.abierta_at)}</div>
-                  <div style="font-size:11px;color:#2e7d32">Inicial: S/ ${parseFloat(c.monto_inicial).toFixed(2)}</div>
+                  <div style="font-size:11px;color:#15803d">Inicial: S/ ${parseFloat(c.monto_inicial).toFixed(2)}</div>
                 </td>
                 <td>
                   <div style="font-weight:600">${c.cerrada_por_nombre || '—'}</div>
@@ -110,14 +173,66 @@
                 <td><strong>S/ ${parseFloat(c.efectivo_esperado || 0).toFixed(2)}</strong></td>
                 <td><strong>S/ ${parseFloat(c.efectivo_contado || 0).toFixed(2)}</strong></td>
                 <td>${difBadge}</td>
-                <td style="font-size:12px;color:#555;max-width:200px;word-wrap:break-word">${c.notas_cierre || '—'}</td>
+                <td>${digitalHtml}</td>
+                <td style="font-size:12px;color:#555;max-width:180px;word-wrap:break-word">${c.notas_cierre || '—'}</td>
               </tr>`;
           }).join('')}
         </tbody>
       </table>`;
   }
 
-  cargar();
+  async function cargarLinea() {
+    try {
+      const reservas = await api.get('/api/reservas');
+      // Filtrar por reservas en línea que tengan estado de pago completo o pagado
+      const online = reservas.filter(r => r.origen === 'linea' && r.pago_estado === 'pagado');
+      renderTablaLinea(online);
+    } catch(err) {
+      document.getElementById('tablaLinea').innerHTML = `<p style="color:var(--red)">${err.message}</p>`;
+    }
+  }
+
+  function renderTablaLinea(lista) {
+    if (lista.length === 0) {
+      document.getElementById('tablaLinea').innerHTML = '<div class="empty"><div class="empty-icon">🌐</div>No se registran reservas pagadas en línea</div>';
+      return;
+    }
+
+    document.getElementById('tablaLinea').innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Cancha</th>
+            <th>Fecha / Horario</th>
+            <th>Cliente (DNI)</th>
+            <th>Monto Pagado</th>
+            <th>Pasarela</th>
+            <th>Fecha Registro</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lista.map(r => `
+            <tr>
+              <td><code style="font-size:11px;background:#f5f5f5;padding:2px 6px;border-radius:4px">${r.codigo || '—'}</code></td>
+              <td>${r.cancha_nombre}</td>
+              <td>
+                <div style="font-weight:600">${r.fecha?.substring(0,10)}</div>
+                <div style="font-size:11px;color:#555">${r.hora_inicio?.substring(0,5)} – ${r.hora_fin?.substring(0,5)}</div>
+              </td>
+              <td>
+                <div style="font-weight:600">${r.cliente_nombre}</div>
+                <div style="font-size:11px;color:#666">DNI: ${r.cliente_dni || '—'}</div>
+              </td>
+              <td><strong style="color:#16a34a">S/ ${parseFloat(r.pago_monto || r.precio_hora || 0).toFixed(2)}</strong></td>
+              <td><span class="badge badge-green">${(r.pago_metodo || 'flow').toUpperCase()}</span></td>
+              <td style="font-size:11px;color:#666">${formatoFecha(r.created_at)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  cargarCaja();
 </script>
 </body>
 </html>

@@ -37,7 +37,11 @@
         <div id="cajaCerradaBox" style="display:none">
           <p style="font-size:13px;color:var(--gray-text);margin-bottom:12px">No hay una caja abierta. Debes abrir caja antes de registrar pagos.</p>
           <div class="form-group">
-            <label>Monto inicial (fondo de caja) S/</label>
+            <label>Nombre de la Recepcionista *</label>
+            <input type="text" id="cajaNombreRecepcionista" placeholder="Ej: María Gómez">
+          </div>
+          <div class="form-group">
+            <label>Monto inicial (fondo de caja) S/ *</label>
             <input type="text" id="cajaMontoInicial" placeholder="0.00" oninput="this.value=this.value.replace(/[^\d.]/g,'')">
           </div>
           <div id="alertCaja" class="alert hidden" style="margin-bottom:12px"></div>
@@ -131,13 +135,21 @@
   }
 
   async function abrirCaja() {
+    const nombre = document.getElementById('cajaNombreRecepcionista').value.trim();
     const monto = document.getElementById('cajaMontoInicial').value;
     const alerta = document.getElementById('alertCaja');
+    if (!nombre) {
+      alerta.textContent = 'Ingresa el nombre de la recepcionista'; alerta.className = 'alert alert-error'; return;
+    }
     if (monto === '' || isNaN(parseFloat(monto))) {
       alerta.textContent = 'Ingresa un monto inicial válido'; alerta.className = 'alert alert-error'; return;
     }
     try {
-      await api.post('/api/caja/abrir', { monto_inicial: parseFloat(monto) });
+      await api.post('/api/caja/abrir', { 
+        monto_inicial: parseFloat(monto),
+        nombre_recepcionista: nombre 
+      });
+      document.getElementById('cajaNombreRecepcionista').value = '';
       document.getElementById('cajaMontoInicial').value = '';
       alerta.className = 'alert hidden';
       cargarEstadoCaja();
