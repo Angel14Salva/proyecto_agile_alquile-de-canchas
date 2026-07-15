@@ -209,19 +209,7 @@ async function runMigrations() {
     `ALTER TABLE reservas_pendientes_pago ADD COLUMN IF NOT EXISTS cupon_codigo VARCHAR(20) NULL`,
     `ALTER TABLE reservas_pendientes_pago ADD COLUMN IF NOT EXISTS cupon_monto DECIMAL(8,2) NULL`,
     `ALTER TABLE reservas DROP INDEX uq_cancha_slot`,
-    `ALTER TABLE caja_turnos ADD COLUMN IF NOT EXISTS nombre_recepcionista VARCHAR(100) NULL`,
-    `SET FOREIGN_KEY_CHECKS = 0`,
-    `TRUNCATE TABLE pagos_movimientos`,
-    `TRUNCATE TABLE pagos`,
-    `TRUNCATE TABLE reservas_pendientes_pago`,
-    `TRUNCATE TABLE reservas`,
-    `TRUNCATE TABLE caja_turnos`,
-    `TRUNCATE TABLE cupones_movimientos`,
-    `TRUNCATE TABLE cupones`,
-    `TRUNCATE TABLE comprobantes`,
-    `TRUNCATE TABLE notas_credito`,
-    `TRUNCATE TABLE audit_log`,
-    `SET FOREIGN_KEY_CHECKS = 1`
+    `ALTER TABLE caja_turnos ADD COLUMN IF NOT EXISTS nombre_recepcionista VARCHAR(100) NULL`
   ];
 
   for (const sql of migrations) {
