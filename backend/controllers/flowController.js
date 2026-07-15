@@ -226,6 +226,12 @@ class FlowController {
       return res.status(400).json({ error: 'El DNI debe tener exactamente 8 dígitos numéricos' });
 
     try {
+      // Liberar cualquier reserva pendiente anterior del mismo usuario para evitar que se bloquee a sí mismo
+      await db.query(
+        "UPDATE reservas_pendientes_pago SET estado = 'fallido' WHERE usuario_id = ? AND estado = 'pendiente'",
+        [usuario_id]
+      );
+
       const disponible = await horarioDisponible(cancha_id, fecha, hora_inicio, hora_fin);
       if (!disponible) return res.status(409).json({ error: 'Ese horario ya esta reservado o se superpone con otra reserva' });
 
