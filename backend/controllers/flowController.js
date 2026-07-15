@@ -433,7 +433,7 @@ class FlowController {
       if (resultado.motivo === 'horario_ya_no_disponible') {
         return res.redirect(frontendUrl + '/pago-exitoso.html?status=conflicto');
       }
-      return res.redirect(frontendUrl + '/pago-exitoso.html?status=no_pagado');
+      return res.redirect(frontendUrl + '/pago-exitoso.html?status=no_pagado&token=' + encodeURIComponent(token));
     } catch (err) {
       console.error('Error retornoWeb:', err?.message || err);
       res.redirect(frontendUrl + '/pago-exitoso.html?status=error');
@@ -458,6 +458,60 @@ class FlowController {
       }
     } catch (err) {
       res.status(500).json({ error: 'Error al consultar estado' });
+    }
+  }
+
+  async pendienteActiva(req, res) {
+    const userId = req.user.userId;
+    try {
+      const [rows] = await db.query(
+        `SELECT rp.*, c.nombre AS cancha_nombre
+         FROM reservas_pendientes_pago rp
+         JOIN canchas c ON rp.cancha_id = c.id
+         WHERE rp.usuario_id = ? AND rp.estado = 'pendiente' AND rp.created_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE
+         ORDER BY rp.id DESC LIMIT 1`,
+        [userId]
+      );
+      if (rows.length === 0) {
+        return res.json({ activa: false });
+      }
+      const p = rows[0];
+      res.json({
+        activa: true,
+        id: p.id,
+        cancha_nombre: p.cancha_nombre,
+        fecha: p.fecha,
+        hora_inicio: p.hora_inicio,
+        hora_fin: p.hora_fin,
+        monto: p.monto,
+        token: p.token
+      });
+    } catch (err) {
+      console.error('Error en pendienteActiva:', err);
+      res.status(500).json({ error: 'Error al obtener reserva pendiente activa' });
+    }
+  }
+
+  async cancelarPendiente(req, res) {
+    const userId = req.user.userId;
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID de reserva pendiente requerido' });
+    try {
+      const [pRows] = await db.query(
+        'SELECT * FROM reservas_pendientes_pago WHERE id = ? AND usuario_id = ?',
+        [id, userId]
+      );
+      if (pRows.length === 0) {
+        return res.status(404).json({ error: 'Reserva pendiente no encontrada' });
+      }
+      await db.query(
+        'UPDATE reservas_pendientes_pago SET estado = "fallido" WHERE id = ?',
+        [id]
+      );
+      res.json({ ok: true, mensaje: 'Reserva pendiente cancelada y horario liberado' });
+    } catch (err) {
+      console.error('Error en cancelarPendiente:', err);
+      res.status(500).json({ error: 'Error al cancelar la reserva pendiente' });
     }
   }
 }

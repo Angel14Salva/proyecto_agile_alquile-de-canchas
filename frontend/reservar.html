@@ -30,6 +30,7 @@
       </div>
 
       <div id="alert" class="alert hidden"></div>
+      <div id="activePendingBanner" style="display:none;margin-bottom:16px"></div>
       <div id="successMsg" class="hidden">
         <div class="card" style="background:var(--green-light);border-color:var(--green-border);text-align:center;padding:32px">
           <div style="font-size:48px;margin-bottom:12px">✅</div>
@@ -788,6 +789,57 @@
     const rol = api.getUsuario()?.rol;
     window.location.href = rol === 'cliente' ? 'mis-reservas.html' : 'reservas.html';
   }
+
+  async function checkActivePending() {
+    try {
+      const resp = await api.get('/api/pagos/flow/pendiente-activa');
+      const banner = document.getElementById('activePendingBanner');
+      if (resp.activa) {
+        const fechaFormat = new Date(resp.fecha).toLocaleDateString('es-PE', { day:'2-digit', month:'2-digit', year:'numeric' });
+        banner.innerHTML = `
+          <div class="card" style="background:#fffbeb;border:1px solid #fef3c7;display:flex;justify-content:space-between;align-items:center;padding:16px;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+            <div style="color:#b45309;font-size:13px;text-align:left">
+              ⚠️ Tienes un intento de pago pendiente para la <strong>${resp.cancha_nombre}</strong> el <strong>${fechaFormat}</strong> de <strong>${resp.hora_inicio.substring(0,5)} a ${resp.hora_fin.substring(0,5)}</strong> (S/ ${parseFloat(resp.monto).toFixed(2)}).
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-primary" onclick="pagarPendiente('${resp.token}')" style="margin:0;padding:6px 12px;font-size:12px;background:#b45309;border-color:#b45309">💳 Pagar ahora</button>
+              <button class="btn-secondary" onclick="cancelarPendiente(${resp.id})" id="btnCancelPending" style="margin:0;padding:6px 12px;font-size:12px">❌ Cancelar y Liberar</button>
+            </div>
+          </div>
+        `;
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+      }
+    } catch (err) {
+      console.error('Error al consultar reserva pendiente:', err);
+    }
+  }
+
+  function pagarPendiente(token) {
+    if (token.startsWith('MOCK-FLOW-TOKEN-')) {
+      window.location.href = `simular-pago.html?token=${token}`;
+    } else {
+      window.location.href = `https://www.flow.cl/app/pay.php?token=${token}`;
+    }
+  }
+
+  async function cancelarPendiente(id) {
+    const btn = document.getElementById('btnCancelPending');
+    btn.disabled = true;
+    btn.textContent = 'Liberando...';
+    try {
+      await api.post('/api/pagos/flow/cancelar-pendiente', { id });
+      document.getElementById('activePendingBanner').style.display = 'none';
+      cargarDisponibilidad();
+    } catch (err) {
+      alert(err.message);
+      btn.disabled = false;
+      btn.textContent = '❌ Cancelar y Liberar';
+    }
+  }
+
   // Preseleccionar cancha si viene por URL (?cancha=ID)
   cargarCanchas().then(() => {
     const params = new URLSearchParams(window.location.search);
@@ -796,6 +848,7 @@
       cargarDisponibilidad();
     }
   });
+  checkActivePending();
 </script>
 </body>
 </html>
