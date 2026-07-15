@@ -24,9 +24,9 @@
     <div id="noPagadoMsg" style="display:none">
       <div style="font-size:64px;margin-bottom:16px">⚠️</div>
       <h2 style="color:#b45309;margin-bottom:8px">Pago no completado</h2>
-      <p style="color:#666;margin-bottom:24px">No completaste la transacción de pago. Puedes cancelar el intento de reserva para liberar el horario de inmediato y volver a elegir.</p>
+      <p style="color:#666;margin-bottom:24px">No completaste la transacción de pago. Puedes cancelar la reserva para liberar el horario de inmediato y volver al inicio.</p>
       <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
-        <button id="btnCancelPayment" onclick="cancelarPago()" class="btn-primary" style="padding:12px 28px;background:#dc2626;border:none;color:white;border-radius:8px;font-weight:600;cursor:pointer">❌ Cancelar pago y liberar horario</button>
+        <button id="btnCancelPayment" onclick="cancelarPago()" class="btn-primary" style="padding:12px 28px;background:#dc2626;border:none;color:white;border-radius:8px;font-weight:600;cursor:pointer">❌ Cancelar reserva</button>
         <a href="reservar.html" class="btn-secondary" style="display:inline-block;padding:12px 28px;background:#6b7280;color:white;border-radius:8px;text-decoration:none;font-weight:600">Volver a intentar</a>
       </div>
     </div>
@@ -76,7 +76,7 @@
     } catch (err) {
       console.error('Error al liberar reserva:', err);
     }
-    window.location.href = 'reservar.html';
+    window.location.href = 'dashboard.html';
   }
 </script>
 </body>
