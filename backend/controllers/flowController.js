@@ -48,7 +48,7 @@ async function horarioDisponible(cancha_id, fecha, hora_inicio, hora_fin) {
   const [ocupadoPendiente] = await db.query(
     `SELECT id FROM reservas_pendientes_pago 
      WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' 
-       AND created_at >= NOW() - INTERVAL 10 MINUTE
+       AND created_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE
        AND hora_inicio < ? AND hora_fin > ?`,
     [cancha_id, fecha, hora_fin, hora_inicio]
   );

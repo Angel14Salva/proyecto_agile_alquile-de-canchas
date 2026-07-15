@@ -70,7 +70,7 @@ class CanchaController {
 
       const [pendientes] = await db.query(
         `SELECT hora_inicio, hora_fin FROM reservas_pendientes_pago 
-         WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' AND created_at >= NOW() - INTERVAL 10 MINUTE`,
+         WHERE cancha_id = ? AND fecha = ? AND estado = 'pendiente' AND created_at >= UTC_TIMESTAMP() - INTERVAL 10 MINUTE`,
         [id, fecha]
       );
 
