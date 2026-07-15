@@ -34,3 +34,14 @@ function mostrarAccesoDenegado(rolesRequeridos) {
   // Detener ejecución del script de la página
   throw new Error('Acceso denegado');
 }
+
+// Validar estado de la sesión en segundo plano periódicamente para cerrar sesión inmediatamente si la cuenta fue eliminada/desactivada
+if (api.isLoggedIn()) {
+  setInterval(async () => {
+    try {
+      await api.get('/api/auth/me');
+    } catch (err) {
+      // Si el backend retorna 401, el wrapper en api.js limpiará el almacenamiento local y redirigirá a login.html de forma automática
+    }
+  }, 5000); // Ejecutar cada 5 segundos
+}
