@@ -18,6 +18,12 @@ const verifyToken = async (req, res, next) => {
         return res.status(401).json({ error: 'Token revocado. Inicia sesión nuevamente.' });
     }
 
+    // Verificar que el usuario exista y siga activo en el sistema (no esté eliminado/desactivado)
+    const [userRows] = await db.query('SELECT id, activo FROM usuarios WHERE id = ?', [decoded.userId]);
+    if (userRows.length === 0 || !userRows[0].activo) {
+      return res.status(401).json({ error: 'El usuario ya no existe o su cuenta ha sido eliminada.' });
+    }
+
     req.user = decoded;
     next();
   } catch (err) {

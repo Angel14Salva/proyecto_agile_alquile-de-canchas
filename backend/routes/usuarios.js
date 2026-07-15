@@ -9,5 +9,6 @@ router.get('/',       verifyToken, checkRole('admin'), usuarioController.getAll.
 router.get('/:id',    verifyToken, checkRole('admin'), usuarioController.getById.bind(usuarioController));
 router.post('/',      verifyToken, checkRole('admin'), usuarioController.create.bind(usuarioController));
 router.put('/:id',    verifyToken, checkRole('admin'), usuarioController.update.bind(usuarioController));
+router.delete('/:id', verifyToken, checkRole('admin'), usuarioController.delete.bind(usuarioController));
 
 module.exports = router;

@@ -7,7 +7,7 @@ class UsuarioController {
   async getAll(req, res) {
     try {
       const [usuarios] = await db.query(
-        'SELECT id, nombre, email, rol, telefono, dni, activo, created_at FROM usuarios ORDER BY created_at DESC'
+        'SELECT id, nombre, email, rol, telefono, dni, activo, created_at FROM usuarios WHERE activo = TRUE ORDER BY created_at DESC'
       );
       res.json(usuarios);
     } catch (err) {
@@ -92,6 +92,27 @@ class UsuarioController {
       res.json(rows);
     } catch (err) {
       res.status(500).json({ error: 'Error al buscar usuarios' });
+    }
+  }
+
+  async delete(req, res) {
+    const { id } = req.params;
+    try {
+      const [userRows] = await db.query('SELECT id, rol FROM usuarios WHERE id = ?', [id]);
+      if (userRows.length === 0) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      const targetUser = userRows[0];
+      if (targetUser.rol === 'admin') {
+        return res.status(400).json({ error: 'No se puede eliminar a un administrador / gerente' });
+      }
+      
+      // Borrado lógico (activo = FALSE)
+      await db.query('UPDATE usuarios SET activo = FALSE WHERE id = ?', [id]);
+      res.json({ ok: true, message: 'Usuario eliminado correctamente' });
+    } catch (err) {
+      console.error('Error al eliminar usuario:', err);
+      res.status(500).json({ error: 'Error al eliminar el usuario' });
     }
   }
 }

@@ -188,9 +188,10 @@
     }
   }
 
-  async function toggleUsuario(id, activo) {
+  async function eliminarUsuario(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este usuario? Esta acción cerrará su sesión de forma inmediata y no se podrá deshacer.')) return;
     try {
-      await api.put(`/api/usuarios/${id}`, { activo: !activo });
+      await api.delete(`/api/usuarios/${id}`);
       cargarUsuarios();
     } catch(err) {
       document.getElementById('alert').textContent = err.message;
@@ -231,14 +232,13 @@
       const badgeRol = { admin:'badge-blue', recepcionista:'badge-amber', cliente:'badge-gray' };
       document.getElementById('listaUsuarios').innerHTML =
         `<div class="table-wrap"><table>
-          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+          <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Acción</th></tr></thead>
           <tbody>
             ${usuarios.map(u => `<tr>
               <td><strong>${u.nombre}</strong></td>
               <td style="font-size:12px;color:var(--gray-text)">${u.email}</td>
               <td><span class="badge ${badgeRol[u.rol]||'badge-gray'}">${rolLabel[u.rol]||u.rol}</span></td>
-              <td><span class="badge ${u.activo?'badge-green':'badge-red'}">${u.activo?'Activo':'Inactivo'}</span></td>
-              <td>${u.rol === 'admin' ? '<span style="color:#999;font-size:12px">—</span>' : `<button class="btn-sm ${u.activo?'btn-danger':'btn-primary'}" onclick="toggleUsuario(${u.id}, ${u.activo})">${u.activo?'Desactivar':'Activar'}</button>`}</td>
+              <td>${u.rol === 'admin' ? '<span style="color:#999;font-size:12px">—</span>' : `<button class="btn-sm btn-danger" onclick="eliminarUsuario(${u.id})">❌ Eliminar</button>`}</td>
             </tr>`).join('')}
           </tbody>
          </table></div>`;
