@@ -458,7 +458,37 @@
     if (checkbox) checkbox.checked = false;
   }
 
+  function cancelarModalPasswordCupon() {
+    document.getElementById('modalPasswordCupon').style.display = 'none';
+    document.getElementById('inputPasswordCupon').value = '';
+    document.getElementById('errorPasswordCupon').style.display = 'none';
+  }
+
+  async function confirmarPasswordCupon() {
+    const password = document.getElementById('inputPasswordCupon').value.trim();
+    const errDiv = document.getElementById('errorPasswordCupon');
+    if (!password) { errDiv.textContent = 'Ingresa tu contraseña'; errDiv.style.display='block'; return; }
+    try {
+      const resp = await api.post('/api/auth/verificar-password', { password });
+      if (resp.ok) {
+        document.getElementById('modalPasswordCupon').style.display = 'none';
+        document.getElementById('inputPasswordCupon').value = '';
+        errDiv.style.display = 'none';
+        await ejecutarVerificacionCupon();
+      }
+    } catch(err) {
+      errDiv.textContent = err.message || 'Contraseña incorrecta';
+      errDiv.style.display = 'block';
+    }
+  }
+
   async function verificarCuponCliente() {
+    document.getElementById('errorPasswordCupon').style.display = 'none';
+    document.getElementById('inputPasswordCupon').value = '';
+    document.getElementById('modalPasswordCupon').style.display = 'flex';
+  }
+
+  async function ejecutarVerificacionCupon() {
     const codigo = document.getElementById('cuponCodigoCliente').value.trim();
     const infoDiv = document.getElementById('infoCuponCliente');
     const bloque = document.getElementById('bloqueAplicacionCupon');
@@ -798,5 +828,19 @@
     }
   });
 </script>
+
+  <!-- Modal verificar contraseña para cupón -->
+  <div id="modalPasswordCupon" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:none;align-items:center;justify-content:center">
+    <div style="background:white;border-radius:12px;padding:28px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+      <h3 style="margin:0 0 8px;font-size:16px">🔒 Confirmar identidad</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:16px">Ingresa tu contraseña para usar el cupón.</p>
+      <input type="password" id="inputPasswordCupon" placeholder="Tu contraseña" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:8px">
+      <div id="errorPasswordCupon" style="color:red;font-size:12px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="cancelarModalPasswordCupon()" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:13px">Cancelar</button>
+        <button onclick="confirmarPasswordCupon()" style="flex:1;padding:10px;background:#2d6a4f;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Confirmar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

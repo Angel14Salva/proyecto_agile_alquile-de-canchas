@@ -10,5 +10,6 @@ router.post('/logout',          verifyToken, authController.logout.bind(authCont
 router.get ('/me',              verifyToken, authController.me.bind(authController));
 router.post('/forgot-password', passwordResetLimiter, authController.forgotPassword.bind(authController));
 router.post('/reset-password',  passwordResetLimiter, authController.resetPassword.bind(authController));
+router.post('/verificar-password', verifyToken, authController.verificarPassword.bind(authController));
 
 module.exports = router;
