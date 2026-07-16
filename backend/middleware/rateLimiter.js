@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Para endpoints de autenticación — más estricto
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10,                   // máximo 10 intentos por IP
+  max: 99999,                   // sin límite
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -14,7 +14,7 @@ const authLimiter = rateLimit({
 // Para forgot-password y reset-password — muy estricto (evita abuso de envío de correos)
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5,                    // máximo 5 solicitudes por IP
+  max: 99999,                    // sin límite
   standardHeaders: true,
   legacyHeaders: false,
   message: {
