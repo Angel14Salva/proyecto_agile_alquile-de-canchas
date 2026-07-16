@@ -5,8 +5,8 @@ const crypto = require('crypto');
 const db     = require('../db/connection');
 const { enviarRecuperacionPassword } = require('../services/emailService');
 
-const MAX_INTENTOS   = 5;
-const BLOQUEO_MIN    = 30;
+const MAX_INTENTOS   = 999;
+const BLOQUEO_MIN    = 0;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
