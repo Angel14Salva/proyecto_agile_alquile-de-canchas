@@ -230,6 +230,20 @@ class AuthController {
       res.status(500).json({ error: 'Error al resetear contraseña' });
     }
   }
+  async verificarPassword(req, res) {
+    const { password } = req.body;
+    const userId = req.usuario?.id;
+    if (!userId || !password) return res.status(400).json({ ok: false, error: "Datos incompletos" });
+    try {
+      const [rows] = await db.query("SELECT password_hash FROM usuarios WHERE id = ?", [userId]);
+      if (!rows.length) return res.status(404).json({ ok: false, error: "Usuario no encontrado" });
+      const valida = await bcrypt.compare(password, rows[0].password_hash);
+      if (!valida) return res.status(401).json({ ok: false, error: "Contrasena incorrecta" });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "Error al verificar" });
+    }
+  }
 }
 
 module.exports = new AuthController();
